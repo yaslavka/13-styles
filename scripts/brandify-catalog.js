@@ -312,12 +312,13 @@ const stageDatabase = async (products, verdicts) => {
 
 const main = async () => {
   const started = Date.now()
+  const skipDownload = process.argv.includes('--no-download')
   const plan = JSON.parse(fs.readFileSync(PLAN_PATH, 'utf-8'))
   const products = plan.products.filter((item) => item.images.length > 0)
-  console.log(`[brandify] старт: товаров в плане ${products.length}`)
+  console.log(`[brandify] старт: товаров в плане ${products.length}, скачивание: ${skipDownload ? 'пропущено' : 'включено'}`)
 
   const zai = await ZAI.create()
-  await stageDownload(products)
+  if (!skipDownload) await stageDownload(products)
   const verdicts = await stageVLM(products, zai)
   await stageComposite(products, verdicts)
   await stageDatabase(products, verdicts)
