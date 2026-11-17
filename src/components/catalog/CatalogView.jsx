@@ -1,20 +1,21 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import useShop from '@/store/useShop'
 import useDebounce from '@/hooks/useDebounce'
+import useT from '@/hooks/useT'
 import API from '@/lib/api'
 import { SORT_OPTIONS, GENDERS, CLOTHING_SIZES, SHOE_SIZES, PRICE_LIMITS } from '@/lib/constants'
 import ProductGrid from '@/components/product/ProductGrid'
-import PixelButton from '@/components/motion/PixelButton'
+import GlassButton from '@/components/motion/GlassButton'
 import Reveal from '@/components/motion/Reveal'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-// Каталог: фильтры (категория, пол, размеры, цена, скидка), сортировка, «показать ещё»
+// Каталог: сохраняемые фильтры, сортировка, бесконечная подгрузка карточек по скроллу
 
 const ALL_SIZES = [...CLOTHING_SIZES, ...SHOE_SIZES]
 
@@ -38,6 +39,8 @@ const CatalogView = ({ categories = [] }) => {
   const filters = useShop((state) => state.filters)
   const setFilter = useShop((state) => state.setFilter)
   const resetFilters = useShop((state) => state.resetFilters)
+  const locale = useShop((state) => state.locale)
+  const t = useT()
 
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
@@ -47,15 +50,17 @@ const CatalogView = ({ categories = [] }) => {
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 400)
   const [localError, setLocalError] = useState('')
+  const sentinelRef = useRef(null)
 
-  // Синхронизация фильтров с query-параметрами хэш-маршрута
+  // Синхронизация с query-параметрами хэш-маршрута (навигация из шапки/подвала)
   useEffect(() => {
     const patch = {}
     if (route.query.category) patch.category = route.query.category
     if (route.query.search !== undefined) patch.search = route.query.search
+    if (route.query.discount) patch.discount = true
     if (Object.keys(patch).length) setFilter(patch)
     setSearchInput(route.query.search || '')
-  }, [route.query.category, route.query.search])
+  }, [route.query.category, route.query.search, route.query.discount, setFilter])
 
   useEffect(() => {
     if (debouncedSearch !== filters.search) setFilter({ search: debouncedSearch })
@@ -67,24 +72,45 @@ const CatalogView = ({ categories = [] }) => {
       else setLoadingMore(true)
       try {
         const data = await API.get(buildQuery(filters, offset, 12))
-        setItems((prev) => (replace ? data.items : [...prev, ...data.items]))
+        setItems((prev) => {
+          if (replace) return data.items
+          const known = new Set(prev.map((item) => item.id))
+          return [...prev, ...data.items.filter((item) => !known.has(item.id))]
+        })
         setTotal(data.total)
         setHasMore(data.hasMore)
         setLocalError('')
       } catch (error) {
         setLocalError(error.message)
-        toast.error('Не удалось загрузить каталог', { description: error.message })
+        toast.error(t('toast.loadError'), { description: error.message })
       } finally {
         setLoading(false)
         setLoadingMore(false)
       }
     },
-    [filters]
+    [filters, t]
   )
 
+  // Первая страница при смене фильтров
   useEffect(() => {
     fetchPage(0, true)
   }, [fetchPage])
+
+  // Бесконечная прокрутка: дозагрузка, когда sentinel появляется у нижнего края
+  useEffect(() => {
+    const node = sentinelRef.current
+    if (!node) return undefined
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          fetchPage(items.length, false)
+        }
+      },
+      { rootMargin: '420px 0px' }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [hasMore, loading, loadingMore, items.length, fetchPage])
 
   const toggleSize = (size) => {
     const next = filters.sizes.includes(size) ? filters.sizes.filter((s) => s !== size) : [...filters.sizes, size]
@@ -103,36 +129,37 @@ const CatalogView = ({ categories = [] }) => {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <Reveal className="mb-6">
-        <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">
-          {activeCategory ? activeCategory.name : 'Каталог PIXART'}
-          <span className="ml-3 text-orange-500 animate-blink">▞</span>
+      <Reveal className="mb-7">
+        <h1 className="font-display text-4xl font-extrabold text-white sm:text-5xl">
+          {activeCategory ? activeCategory.name : t('catalog.title')}
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {total > 0 ? `${total} товаров` : 'Пиксельная коллекция для 16–50 лет'} · фильтры и сортировка работают мгновенно
+        <p className="mt-2 text-base font-semibold text-muted-foreground">
+          {total > 0 ? t('catalog.items', { total }) : t('catalog.itemsShort')}
         </p>
       </Reveal>
 
-      <Reveal className="pixel-corners mb-8 border border-purple-500/25 bg-card/70 p-4 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Категории">
+      <Reveal className="glass-panel mb-8 p-5">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Categories">
           <button
             type="button"
             onClick={() => setFilter({ category: 'all' })}
-            className={`pixel-corners-sm px-3 py-1.5 font-display text-sm transition-colors ${
-              filters.category === 'all' ? 'bg-gradient-to-r from-purple-600 to-orange-500 text-white' : 'border border-purple-500/30 text-purple-200 hover:bg-purple-500/15'
+            className={`rounded-full px-4 py-2 font-display text-sm font-bold transition-all ${
+              filters.category === 'all'
+                ? 'glass-btn glass-btn-primary text-white'
+                : 'glass-btn glass-btn-ghost text-purple-200'
             }`}
           >
-            Все
+            {t('catalog.all')}
           </button>
           {categories.map((category) => (
             <button
               key={category.id}
               type="button"
               onClick={() => setFilter({ category: category.slug })}
-              className={`pixel-corners-sm px-3 py-1.5 font-display text-sm transition-colors ${
+              className={`rounded-full px-4 py-2 font-display text-sm font-bold transition-all ${
                 filters.category === category.slug
-                  ? 'bg-gradient-to-r from-purple-600 to-orange-500 text-white'
-                  : 'border border-purple-500/30 text-purple-200 hover:bg-purple-500/15'
+                  ? 'glass-btn glass-btn-primary text-white'
+                  : 'glass-btn glass-btn-ghost text-purple-200'
               }`}
             >
               {category.name}
@@ -141,48 +168,48 @@ const CatalogView = ({ categories = [] }) => {
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="flex items-center gap-2 text-xs text-purple-200">
-            <SlidersHorizontal className="h-4 w-4 text-orange-400" aria-hidden />
-            Сортировка
+          <label className="flex items-center gap-2 text-xs font-bold text-purple-200">
+            <SlidersHorizontal className="h-4 w-4 text-orange-300" aria-hidden />
+            {t('catalog.sort')}
             <Select value={filters.sort} onValueChange={(value) => setFilter({ sort: value })}>
-              <SelectTrigger className="h-9 border-purple-500/30 bg-[#0d0c1c] text-sm" aria-label="Сортировка">
-                <SelectValue placeholder="Новинки" />
+              <SelectTrigger className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold" aria-label={t('catalog.sort')}>
+                <SelectValue placeholder={t('sort.new')} />
               </SelectTrigger>
-              <SelectContent className="border-purple-500/30 bg-[#10101f]">
+              <SelectContent className="rounded-2xl border-white/15 bg-[#181335]/95 backdrop-blur-xl">
                 {SORT_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="text-sm">
-                    {option.name}
+                  <SelectItem key={option.value} value={option.value} className="rounded-xl font-semibold">
+                    {t(option.key)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </label>
 
-          <label className="flex items-center gap-2 text-xs text-purple-200">
-            Кто
+          <label className="flex items-center gap-2 text-xs font-bold text-purple-200">
+            {t('catalog.gender')}
             <Select value={filters.gender} onValueChange={(value) => setFilter({ gender: value })}>
-              <SelectTrigger className="h-9 border-purple-500/30 bg-[#0d0c1c] text-sm" aria-label="Пол">
+              <SelectTrigger className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold" aria-label={t('catalog.gender')}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="border-purple-500/30 bg-[#10101f]">
+              <SelectContent className="rounded-2xl border-white/15 bg-[#181335]/95 backdrop-blur-xl">
                 {GENDERS.map((gender) => (
-                  <SelectItem key={gender.value} value={gender.value} className="text-sm">
-                    {gender.name}
+                  <SelectItem key={gender.value} value={gender.value} className="rounded-xl font-semibold">
+                    {t(gender.key)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </label>
 
-          <label className="flex items-center gap-2 text-xs text-purple-200">
-            Цена ₽
+          <label className="flex items-center gap-2 text-xs font-bold text-purple-200">
+            {t('catalog.price')}
             <Input
               type="number"
               min={0}
               value={filters.min}
               onChange={(event) => setFilter({ min: Math.max(0, Number(event.target.value) || 0) })}
-              className="h-9 border-purple-500/30 bg-[#0d0c1c] text-sm"
-              aria-label="Минимальная цена"
+              className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold"
+              aria-label="Min price"
             />
             <span className="text-purple-400">—</span>
             <Input
@@ -190,33 +217,33 @@ const CatalogView = ({ categories = [] }) => {
               min={0}
               value={filters.max}
               onChange={(event) => setFilter({ max: Number(event.target.value) || PRICE_LIMITS.max })}
-              className="h-9 border-purple-500/30 bg-[#0d0c1c] text-sm"
-              aria-label="Максимальная цена"
+              className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold"
+              aria-label="Max price"
             />
           </label>
 
-          <div className="flex items-center justify-between gap-3 rounded-md border border-purple-500/30 bg-[#0d0c1c] px-3 py-1.5">
-            <span className="text-xs text-purple-200">Только со скидкой</span>
+          <div className="flex items-center justify-between gap-3 rounded-full border border-white/20 bg-white/5 px-4 py-1.5">
+            <span className="text-xs font-bold text-purple-200">{t('catalog.discountOnly')}</span>
             <Switch
               checked={filters.discount}
               onCheckedChange={(checked) => setFilter({ discount: checked })}
-              aria-label="Только товары со скидкой"
+              aria-label={t('catalog.discountOnly')}
             />
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Размеры">
-          <span className="text-xs text-purple-200">Размеры:</span>
+        <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Sizes">
+          <span className="text-xs font-bold text-purple-200">{t('catalog.sizes')}</span>
           {ALL_SIZES.map((size) => (
             <button
               key={size}
               type="button"
               onClick={() => toggleSize(size)}
               aria-pressed={filters.sizes.includes(size)}
-              className={`pixel-corners-sm px-2.5 py-1 font-display text-xs transition-colors ${
+              className={`rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all ${
                 filters.sizes.includes(size)
-                  ? 'bg-orange-500 text-white'
-                  : 'border border-purple-500/30 text-purple-200 hover:bg-purple-500/15'
+                  ? 'glass-btn glass-btn-orange text-white'
+                  : 'glass-btn glass-btn-ghost text-purple-200'
               }`}
             >
               {size}
@@ -225,44 +252,46 @@ const CatalogView = ({ categories = [] }) => {
           <button
             type="button"
             onClick={resetAll}
-            className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-orange-300"
+            className="ml-auto flex items-center gap-1.5 text-xs font-bold text-muted-foreground transition-colors hover:text-orange-300"
           >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Сбросить всё
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden /> {t('catalog.resetAll')}
           </button>
         </div>
       </Reveal>
 
-      <div className="mb-5">
+      <div className="mb-6">
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Найти: худи, кроссовки, рюкзак…"
-          className="h-11 max-w-md border-purple-500/30 bg-[#0d0c1c]"
-          aria-label="Поиск по каталогу"
+          placeholder={t('catalog.searchPlaceholder')}
+          className="h-12 max-w-lg rounded-full border-white/20 bg-white/5 font-semibold"
+          aria-label={t('header.search')}
         />
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="pixel-corners aspect-[3/4] animate-pulse bg-card/60" />
+            <div key={index} className="glass-card aspect-[3/4] animate-pulse" />
           ))}
         </div>
       ) : localError && !items.length ? (
-        <div className="pixel-corners border border-orange-500/40 bg-orange-500/10 p-8 text-center font-display text-orange-200">
-          {localError}
-        </div>
+        <div className="glass-panel p-8 text-center font-display text-lg font-bold text-orange-200">{localError}</div>
       ) : (
         <>
           <ProductGrid products={items} />
-          {hasMore ? (
-            <div className="mt-8 flex justify-center">
-              <PixelButton tone="dark" className="h-11 px-8" disabled={loadingMore} onClick={() => fetchPage(items.length, false)}>
-                {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                Показать ещё
-              </PixelButton>
-            </div>
-          ) : null}
+
+          {/* Маркер бесконечной подгрузки */}
+          <div ref={sentinelRef} className="h-2" aria-hidden />
+
+          <div className="mt-8 flex min-h-16 items-center justify-center" aria-live="polite">
+            {loadingMore ? (
+              <span className="flex items-center gap-2 font-display text-sm font-bold text-purple-300">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                {t('catalog.loading')}
+              </span>
+            ) : null}
+          </div>
         </>
       )}
     </div>

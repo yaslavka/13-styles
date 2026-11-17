@@ -25,14 +25,12 @@ const ADMIN_TABS = [
 const AdminPanel = () => {
   const navigate = useShop((state) => state.navigate)
   const [categories, setCategories] = useState([])
-  const [cacheMode, setCacheMode] = useState('')
 
   useEffect(() => {
     const load = async () => {
       try {
         const data = await API.get('/api/categories')
         setCategories(data.categories)
-        setCacheMode(data.cacheMode || '')
       } catch (error) {
         toast.error('Категории недоступны', { description: error.message })
       }
@@ -47,11 +45,6 @@ const AdminPanel = () => {
           <GradientText styleIndex={4}>ПУЛЬТ УПРАВЛЕНИЯ</GradientText>
         </h1>
         <div className="flex items-center gap-3">
-          {cacheMode ? (
-            <span className="pixel-corners-sm border border-purple-500/30 bg-purple-500/10 px-2 py-1 font-display text-[11px] text-purple-200">
-              cache: {cacheMode}
-            </span>
-          ) : null}
           <button
             type="button"
             onClick={() => navigate('home')}

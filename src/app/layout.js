@@ -3,33 +3,33 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { SITE_NAME, SITE_URL } from '@/lib/constants'
 
-// SEO-метаданные маркетплейса (по правилам: canonical, OG, Twitter, robots)
+// SEO-метаданные витрины 13 STYLES (английские — базовый язык витрины; админ-панель на русском)
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'PIXART MARKET — пиксельный маркетплейс одежды, обуви и аксессуаров 16–50',
-    template: '%s — PIXART MARKET',
+    default: '13 STYLES — cartoon-real marketplace for clothing, shoes & accessories',
+    template: '%s — 13 STYLES',
   },
   description:
-    'PIXART MARKET — анимированный маркетплейс стритвир-одежды, обуви и аксессуаров в пиксель-арт стилистике. Мужская и женская одежда, кроссовки, рюкзаки, часы. Для подростков от 16 и взрослых до 50. Доставка 1–3 дня, возврат 14 дней, поддержка 24/7 в чате.',
+    '13 STYLES is a cartoon-real marketplace for streetwear clothing, sneakers and accessories. Glossy animated storefront, 13 signature gradient styles, delivery across Europe in 1–3 days, 14-day returns and 24/7 human support. For teens from 16 and adults up to 50.',
   keywords: [
-    'маркетплейс одежды',
-    'купить одежду онлайн',
-    'пиксель-арт стиль',
-    'стритвир маркетплейс',
-    'мужская одежда',
-    'женская одежда',
-    'кроссовки купить',
-    'обувь онлайн',
-    'аксессуары купить',
-    'рюкзак купить',
-    'одежда для подростков',
-    'одежда 16 лет',
-    'pixart market',
+    'clothing marketplace',
+    'buy clothes online Europe',
+    'cartoon style streetwear',
+    'sneakers marketplace',
+    "men's clothing",
+    "women's clothing",
+    'buy sneakers',
+    'shoes online shop',
+    'buy accessories',
+    'backpack shop',
+    'clothing for teens 16',
+    'streetwear for adults',
+    '13 styles',
   ],
-  authors: [{ name: 'PIXART Team' }],
-  creator: 'PIXART',
-  publisher: 'PIXART MARKET',
+  authors: [{ name: '13 STYLES Team' }],
+  creator: '13 STYLES',
+  publisher: '13 STYLES',
   applicationName: SITE_NAME,
   category: 'shopping',
   alternates: { canonical: '/' },
@@ -40,17 +40,17 @@ export const metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'ru_RU',
+    locale: 'en_US',
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: 'PIXART MARKET — пиксельный маркетплейс одежды 16–50',
+    title: '13 STYLES — cartoon-real marketplace for clothing 16–50',
     description:
-      'Одежда, обувь и аксессуары в пиксель-арт стилистике. 13 фирменных градиентных стилей, анимированные карточки товаров, поддержка в чате 24/7.',
+      'Streetwear, sneakers and accessories rendered in a cartoon-real look. 13 signature gradient styles, sliding product cards, 24/7 support chat.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PIXART MARKET — пиксельный маркетплейс одежды 16–50',
-    description: 'Стритвир, обувь и аксессуары в 8-битной стилистике. Для 16–50 лет.',
+    title: '13 STYLES — cartoon-real marketplace for clothing 16–50',
+    description: 'Streetwear, sneakers and accessories in a glossy cartoon-real look. For 16–50.',
   },
   icons: { icon: '/icon.svg' },
 }
@@ -58,11 +58,11 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#07070f',
+  themeColor: '#08081a',
 }
 
 const RootLayout = ({ children }) => (
-  <html lang="ru" className="dark" suppressHydrationWarning>
+  <html lang="en" className="dark" suppressHydrationWarning>
     <body className="min-h-screen antialiased bg-background text-foreground">
       {children}
       <Toaster />

@@ -41,19 +41,19 @@ const Page = async () => {
         '@id': `${SITE_URL}#organization`,
         name: SITE_NAME,
         url: SITE_URL,
-        description: `Пиксельный маркетплейс одежды, обуви и аксессуаров для ${AGE_LABEL} лет`,
+        description: `A cartoon-real marketplace for clothing, shoes and accessories for ${AGE_LABEL}`,
       },
       {
         '@type': 'WebSite',
         '@id': `${SITE_URL}#website`,
         url: SITE_URL,
         name: SITE_NAME,
-        inLanguage: 'ru-RU',
+        inLanguage: 'en',
         publisher: { '@id': `${SITE_URL}#organization` },
       },
       {
         '@type': 'ItemList',
-        name: 'Хиты продаж PIXART MARKET',
+        name: 'Top picks 13 STYLES',
         itemListElement: initialProducts.slice(0, 8).map((product, index) => ({
           '@type': 'ListItem',
           position: index + 1,

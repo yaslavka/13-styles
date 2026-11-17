@@ -34,7 +34,7 @@ const AdminChat = () => {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-      <div className="pixel-corners border border-purple-500/25 bg-card/70">
+      <div className="rounded-2xl border border-purple-500/25 bg-card/70">
         <div className="flex items-center justify-between border-b border-purple-500/25 px-4 py-3">
           <h3 className="flex items-center gap-2 font-display text-sm text-white">
             <MessagesSquare className="h-4 w-4 text-orange-400" aria-hidden /> Диалоги
@@ -54,7 +54,7 @@ const AdminChat = () => {
                   activeRoom === room.id ? 'bg-purple-500/20' : 'hover:bg-purple-500/10'
                 }`}
               >
-                <span className="pixel-corners-sm grid h-8 w-8 shrink-0 place-items-center bg-black/40 font-display text-[10px] text-purple-200">
+                <span className="rounded-xl grid h-8 w-8 shrink-0 place-items-center bg-black/40 font-display text-[10px] text-purple-200">
                   {(room.userName || 'Г').slice(0, 2).toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -72,7 +72,7 @@ const AdminChat = () => {
         </ul>
       </div>
 
-      <div className="pixel-corners flex min-h-96 flex-col border border-purple-500/25 bg-card/70">
+      <div className="rounded-2xl flex min-h-96 flex-col border border-purple-500/25 bg-card/70">
         {!activeRoom ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
             <span className="font-display text-4xl text-purple-500/50 animate-blink">▚▞▚</span>
@@ -86,14 +86,14 @@ const AdminChat = () => {
                 <p className="font-display text-sm text-white">{activeRoomInfo?.userName || 'Гость'}</p>
                 <p className="text-[11px] text-muted-foreground">room: {activeRoom}</p>
               </div>
-              <span className="text-[11px] text-muted-foreground">{connected ? 'socket.io online' : 'offline'}</span>
+              <span className="text-[11px] text-muted-foreground">{connected ? 'онлайн' : 'офлайн'}</span>
             </div>
 
             <div ref={scrollRef} className="scrollbar-pixel flex-1 space-y-2.5 overflow-y-auto px-4 py-3">
               {messages.map((message) => (
                 <div key={message.id} className={`flex ${message.from === 'support' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`pixel-corners-sm max-w-[75%] px-3 py-2 text-sm ${
+                    className={`rounded-xl max-w-[75%] px-3 py-2 text-sm ${
                       message.from === 'support'
                         ? 'bg-gradient-to-br from-orange-600 to-orange-700 text-white'
                         : 'border border-purple-500/30 bg-purple-500/10 text-purple-100'
@@ -108,7 +108,7 @@ const AdminChat = () => {
               ))}
               {typingWho === 'user' ? (
                 <div className="flex justify-start">
-                  <span className="pixel-corners-sm border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200">
+                  <span className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs text-purple-200">
                     гость печатает<span className="animate-blink">…</span>
                   </span>
                 </div>
@@ -127,7 +127,7 @@ const AdminChat = () => {
               <button
                 type="submit"
                 disabled={!input.trim()}
-                className="pixel-corners-sm grid h-10 w-10 place-items-center bg-gradient-to-br from-orange-500 to-purple-600 text-white disabled:opacity-40"
+                className="rounded-xl grid h-10 w-10 place-items-center bg-gradient-to-br from-orange-500 to-purple-600 text-white disabled:opacity-40"
                 aria-label="Отправить ответ"
               >
                 <SendHorizonal className="h-4 w-4" aria-hidden />

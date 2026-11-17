@@ -1,10 +1,10 @@
 import { createHmac, createHash, timingSafeEqual } from 'crypto'
 
 // Админ-авторизация PIXART MARKET
-// Пароль задаётся через env ADMIN_PASSWORD (по умолчанию pixart2024).
+// Пароль задаётся через env ADMIN_PASSWORD (по умолчанию 13styles2024).
 // Токен — HMAC от пароля, передаётся клиентом в заголовке x-admin-key.
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'pixart2024'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '13styles2024'
 
 const sha256 = (value) => createHash('sha256').update(String(value)).digest()
 

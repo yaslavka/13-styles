@@ -5,8 +5,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Separator } from '@/components/ui/separator'
 import useCart from '@/store/useCart'
 import useShop from '@/store/useShop'
-import { formatPrice, styleGradient } from '@/lib/constants'
-import PixelButton from '@/components/motion/PixelButton'
+import useT from '@/hooks/useT'
+import { formatPrice } from '@/lib/constants'
+import GlassButton from '@/components/motion/GlassButton'
 
 // Корзина в выдвижной панели: изменение количества, удаление, итог
 
@@ -18,6 +19,8 @@ const CartSheet = () => {
   const remove = useCart((state) => state.remove)
   const total = useCart((state) => state.total())
   const navigate = useShop((state) => state.navigate)
+  const locale = useShop((state) => state.locale)
+  const t = useT()
 
   const goToCheckout = () => {
     close()
@@ -26,63 +29,60 @@ const CartSheet = () => {
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => (open ? null : close())}>
-      <SheetContent side="right" className="flex w-full flex-col border-purple-500/30 bg-[#0a0918] sm:max-w-md">
+      <SheetContent side="right" className="flex w-full flex-col border-white/15 bg-[#12102a]/95 backdrop-blur-xl sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 font-display text-purple-200">
-            <ShoppingBag className="h-5 w-5 text-orange-400" aria-hidden />
-            Корзина {items.length ? `· ${items.length}` : ''}
+            <ShoppingBag className="h-5 w-5 text-orange-300" aria-hidden />
+            {t('cart.title')} {items.length ? `· ${items.length}` : ''}
           </SheetTitle>
         </SheetHeader>
 
         {items.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-            <span className="font-display text-5xl text-purple-500/60 animate-blink">▚▞▚</span>
-            <p className="font-display text-lg text-white">Корзина пуста</p>
-            <p className="text-sm text-muted-foreground">Загляни в каталог — там пиксельные худи, кроссовки и рюкзаки</p>
-            <PixelButton
+          <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+            <span className="font-display text-5xl text-purple-400/60 animate-blink">✦ ✧ ✦</span>
+            <p className="font-display text-2xl font-bold text-white">{t('cart.empty')}</p>
+            <p className="text-sm font-semibold text-muted-foreground">{t('cart.emptyText')}</p>
+            <GlassButton
               tone="primary"
               onClick={() => {
                 close()
                 navigate('catalog')
               }}
             >
-              В каталог
-            </PixelButton>
+              {t('cart.toCatalog')}
+            </GlassButton>
           </div>
         ) : (
           <>
-            <div className="scrollbar-pixel flex-1 overflow-y-auto px-4 pb-4">
-              <ul className="space-y-3">
+            <div className="scrollbar-glass flex-1 overflow-y-auto px-4 pb-4">
+              <ul className="space-y-3.5">
                 {items.map((item) => (
-                  <li key={item.key} className="pixel-corners-sm flex gap-3 border border-purple-500/25 bg-card/70 p-3">
-                    <span
-                      className="h-16 w-16 shrink-0 overflow-hidden rounded-sm"
-                      style={{ background: styleGradient(3) }}
-                    >
+                  <li key={item.key} className="glass-card flex gap-3.5 p-3.5">
+                    <span className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10">
                       {item.image ? (
-                        <img src={item.image} alt={item.name} className="h-full w-full object-cover image-pixelated" />
+                        <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                       ) : null}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-display text-sm text-white">{item.name}</p>
-                      {item.size ? <p className="text-xs text-purple-300">Размер: {item.size}</p> : null}
-                      <p className="mt-0.5 font-display text-sm text-orange-300">{formatPrice(item.price)}</p>
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <div className="flex items-center border border-purple-500/40">
+                      <p className="truncate font-display text-base font-bold text-white">{item.name}</p>
+                      {item.size ? <p className="text-xs font-bold text-purple-300">{t('cart.size', { size: item.size })}</p> : null}
+                      <p className="mt-0.5 font-display text-sm font-bold text-orange-300">{formatPrice(item.price, locale)}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex items-center rounded-full border border-white/20 bg-white/5">
                           <button
                             type="button"
                             onClick={() => setQty(item.key, item.qty - 1)}
-                            className="grid h-7 w-7 place-items-center text-purple-200 hover:text-white"
-                            aria-label="Уменьшить количество"
+                            className="grid h-8 w-8 place-items-center text-purple-200 hover:text-white"
+                            aria-label="Decrease"
                           >
                             <Minus className="h-3.5 w-3.5" aria-hidden />
                           </button>
-                          <span className="w-7 text-center text-xs text-white">{item.qty}</span>
+                          <span className="w-7 text-center text-sm font-bold text-white">{item.qty}</span>
                           <button
                             type="button"
                             onClick={() => setQty(item.key, item.qty + 1)}
-                            className="grid h-7 w-7 place-items-center text-purple-200 hover:text-white"
-                            aria-label="Увеличить количество"
+                            className="grid h-8 w-8 place-items-center text-purple-200 hover:text-white"
+                            aria-label="Increase"
                           >
                             <Plus className="h-3.5 w-3.5" aria-hidden />
                           </button>
@@ -90,13 +90,13 @@ const CartSheet = () => {
                         <button
                           type="button"
                           onClick={() => remove(item.key)}
-                          className="grid h-7 w-7 place-items-center text-muted-foreground transition-colors hover:text-orange-400"
-                          aria-label={`Удалить ${item.name}`}
+                          className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-orange-500/15 hover:text-orange-400"
+                          aria-label={t('cart.remove', { name: item.name })}
                         >
-                          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                          <Trash2 className="h-4 w-4" aria-hidden />
                         </button>
-                        <span className="ml-auto font-display text-xs text-white/80">
-                          {formatPrice(item.price * item.qty)}
+                        <span className="ml-auto font-display text-sm font-bold text-white/85">
+                          {formatPrice(item.price * item.qty, locale)}
                         </span>
                       </div>
                     </div>
@@ -105,16 +105,16 @@ const CartSheet = () => {
               </ul>
             </div>
 
-            <div className="border-t border-purple-500/25 px-4 py-4">
+            <div className="border-t border-white/10 px-4 py-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Итого</span>
-                <span className="font-display text-xl font-bold text-white">{formatPrice(total)}</span>
+                <span className="text-sm font-bold text-muted-foreground">{t('cart.total')}</span>
+                <span className="font-display text-2xl font-extrabold text-white">{formatPrice(total, locale)}</span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Доставка 1–3 дня · возврат 14 дней</p>
-              <Separator className="my-3 bg-purple-500/20" />
-              <PixelButton tone="primary" className="h-12 w-full text-base" onClick={goToCheckout}>
-                Оформить заказ <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-              </PixelButton>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">{t('cart.note')}</p>
+              <Separator className="my-3 bg-white/10" />
+              <GlassButton tone="primary" className="h-13 w-full text-lg" onClick={goToCheckout}>
+                {t('cart.checkout')} <ArrowRight className="ml-2 h-5 w-5" aria-hidden />
+              </GlassButton>
             </div>
           </>
         )}

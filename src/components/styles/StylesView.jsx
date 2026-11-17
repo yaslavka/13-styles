@@ -2,75 +2,80 @@
 
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
-import STYLES_DATA from '@/lib/constants'
 import useShop from '@/store/useShop'
+import useT from '@/hooks/useT'
+import { STYLES as STYLE_LIST } from '@/lib/constants'
 import GradientText from '@/components/motion/GradientText'
-import PixelButton from '@/components/motion/PixelButton'
 import Reveal from '@/components/motion/Reveal'
 
-// Страница «13 стилей»: витрина фирменных градиентов + галерея пиксель-спрайтов
+// Страница «13 Styles»: витрина фирменных градиентов + галерея мультяшных рендеров коллекции
 
-const SPRITES = ['hoodie', 'tshirt', 'jacket', 'pants', 'dress', 'sneaker', 'boot', 'cap', 'backpack', 'sunglasses', 'watch']
-const COLORWAYS = ['violet', 'orange', 'blue', 'lilac', 'night']
+const PRODUCT_SLUGS = [
+  'hoodie-neo-violet', 'tshirt-drip-orange', 'bomber-cyber-blue', 'jeans-grid-blue',
+  'dress-neon-violet', 'hoodie-pastel-lilac', 'crop-chic-lilac', 'jacket-retro-orange',
+  'sneakers-run-orange', 'sneakers-force-blue', 'boots-urban-night', 'hightops-storm-violet',
+  'cap-drip-orange', 'backpack-data-violet', 'sunglasses-cyber-blue', 'watch-time-orange',
+]
 
 const StylesView = () => {
   const accentStyle = useShop((state) => state.accentStyle)
   const setAccentStyle = useShop((state) => state.setAccentStyle)
-  const styles = STYLES_DATA.STYLES
+  const t = useT()
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <Reveal className="mb-8 text-center">
-        <h1 className="font-display text-4xl font-bold sm:text-5xl">
-          <GradientText styleIndex={2}>13 СТИЛЕЙ</GradientText>
+      <Reveal className="mb-10 text-center">
+        <h1 className="font-display text-5xl font-extrabold sm:text-6xl">
+          <GradientText styleIndex={2}>{t('styles.title')}</GradientText>
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Фирменная система градиентов PIXART: чёрный, синий, фиолетовый, светло-фиолетовый, оранжевый и светло-оранжевый
-          в 13 комбинациях. Активируй стиль — он подсветит логотип магазина.
+        <p className="mx-auto mt-4 max-w-2xl text-base font-semibold leading-relaxed text-muted-foreground">
+          {t('styles.subtitle')}
         </p>
       </Reveal>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {styles.map((style, index) => {
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {STYLE_LIST.map((style, index) => {
           const isActive = accentStyle === style.id
           return (
             <motion.button
               key={style.id}
               type="button"
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 26 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-30px' }}
               transition={{ duration: 0.4, delay: (index % 4) * 0.06 }}
-              whileHover={{ y: -6 }}
+              whileHover={{ y: -8 }}
               onClick={() => setAccentStyle(style.id)}
-              className={`group pixel-corners relative overflow-hidden p-5 text-left transition-shadow ${
+              className={`group glow-frame relative overflow-hidden rounded-[1.6rem] p-6 text-left transition-shadow ${
                 isActive ? 'ring-2 ring-orange-400' : ''
               }`}
               style={{ background: `linear-gradient(135deg, ${style.colors[0]}, ${style.colors[1]}, ${style.colors[2]})` }}
               aria-pressed={isActive}
-              aria-label={`Стиль ${style.id + 1}: ${style.name}`}
+              aria-label={`${t('styles.styleLabel', { number: style.id + 1 })}: ${style.name}`}
             >
               <span className="animate-gradient-x absolute inset-0 opacity-40" aria-hidden
                 style={{ background: `linear-gradient(120deg, transparent 30%, ${style.accent} 50%, transparent 70%)`, backgroundSize: '220% 220%' }}
               />
               <span className="relative block">
-                <span className="font-display text-xs text-white/60">STYLE {String(style.id + 1).padStart(2, '0')}</span>
-                <span className="mt-1 block font-display text-xl font-bold text-white drop-shadow">{style.name}</span>
-                <span className="mt-3 flex gap-1.5">
-                  {style.colors.map((color, colorIndex) => (
-                    <span key={`${color}-${colorIndex}`} className="h-4 w-4 rounded-sm border border-white/30" style={{ background: color }} aria-hidden />
-                  ))}
-                  <span className="h-4 w-4 rounded-sm border border-white/30" style={{ background: style.accent }} aria-hidden />
+                <span className="font-display text-xs font-bold tracking-wider text-white/65">
+                  {t('styles.styleLabel', { number: String(style.id + 1).padStart(2, '0') })}
                 </span>
-                <span className="mt-3 flex items-center justify-between">
-                  <span className="font-display text-[11px] text-white/70">{style.accent.toUpperCase()}</span>
+                <span className="mt-1.5 block font-display text-2xl font-extrabold text-white drop-shadow-md">{style.name}</span>
+                <span className="mt-4 flex gap-2">
+                  {style.colors.map((color, colorIndex) => (
+                    <span key={`${color}-${colorIndex}`} className="h-5 w-5 rounded-full border border-white/35 shadow-inner" style={{ background: color }} aria-hidden />
+                  ))}
+                  <span className="h-5 w-5 rounded-full border border-white/35" style={{ background: style.accent }} aria-hidden />
+                </span>
+                <span className="mt-4 flex items-center justify-between">
+                  <span className="font-display text-xs font-bold text-white/70">{style.accent.toUpperCase()}</span>
                   {isActive ? (
-                    <span className="pixel-corners-sm flex items-center gap-1 bg-orange-500 px-2 py-0.5 font-display text-xs text-white animate-pop">
-                      <Check className="h-3 w-3" aria-hidden /> АКТИВЕН
+                    <span className="glass-btn glass-btn-orange flex items-center gap-1 rounded-full px-3 py-1 font-display text-xs font-bold text-white animate-pop">
+                      <Check className="h-3 w-3" aria-hidden /> {t('styles.active')}
                     </span>
                   ) : (
-                    <span className="font-display text-[11px] text-white/50 transition-colors group-hover:text-orange-300">
-                      активировать →
+                    <span className="font-display text-xs font-bold text-white/55 transition-colors group-hover:text-orange-200">
+                      {t('styles.activate')}
                     </span>
                   )}
                 </span>
@@ -80,30 +85,22 @@ const StylesView = () => {
         })}
       </div>
 
-      <Reveal className="mt-14">
-        <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
-          Пиксель-спрайты коллекции
-          <span className="ml-3 text-orange-500 animate-blink">▚</span>
-        </h2>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Все товары рисуются пиксель-арт спрайтами в 5 цветовых схемах — это и есть фото товаров
-        </p>
+      <Reveal className="mt-16">
+        <h2 className="font-display text-3xl font-extrabold text-white sm:text-4xl">{t('styles.galleryTitle')}</h2>
+        <p className="mt-2 text-base font-semibold text-muted-foreground">{t('styles.galleryText')}</p>
       </Reveal>
 
-      <div className="scrollbar-pixel pixel-corners mt-6 max-h-96 overflow-y-auto border border-purple-500/25 bg-card/60 p-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-          {SPRITES.map((sprite) =>
-            COLORWAYS.map((colorway) => (
-              <figure key={`${sprite}-${colorway}`} className="group relative overflow-hidden rounded-sm">
+      <div className="scrollbar-glass glass-panel mt-7 max-h-96 overflow-y-auto p-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
+          {PRODUCT_SLUGS.map((slug) =>
+            [1, 2, 3].map((shot) => (
+              <figure key={`${slug}-${shot}`} className="group relative overflow-hidden rounded-2xl">
                 <img
-                  src={`/products/${sprite}-${colorway}-1.svg`}
-                  alt={`Пиксель-спрайт ${sprite}, схема ${colorway}`}
+                  src={`/products/${slug}-${shot}.png`}
+                  alt={t('styles.spriteAlt', { sprite: slug.split('-')[0], colorway: slug.split('-').pop() })}
                   loading="lazy"
-                  className="aspect-square w-full object-cover image-pixelated transition-transform duration-300 group-hover:scale-105"
+                  className="aspect-square w-full rounded-2xl object-cover transition-transform duration-300 group-hover:scale-105"
                 />
-                <figcaption className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center font-display text-[10px] text-white/80 opacity-0 transition-opacity group-hover:opacity-100">
-                  {sprite} · {colorway}
-                </figcaption>
               </figure>
             ))
           )}

@@ -9,7 +9,7 @@ import Reveal from '@/components/motion/Reveal'
 // Обзор: ключевые метрики, малый остаток, последние заказы, распределение по категориям
 
 const StatCard = ({ icon: Icon, label, value, tone }) => (
-  <div className="pixel-corners relative overflow-hidden border border-purple-500/25 bg-card/70 p-4 backdrop-blur-sm">
+  <div className="rounded-2xl relative overflow-hidden border border-purple-500/25 bg-card/70 p-4 backdrop-blur-sm">
     <div className="absolute inset-x-0 top-0 h-0.5" style={{ background: tone }} aria-hidden />
     <div className="flex items-center justify-between">
       <span className="text-xs text-muted-foreground">{label}</span>
@@ -40,7 +40,7 @@ const AdminDashboard = () => {
   }, [])
 
   if (error) {
-    return <p className="pixel-corners border border-orange-500/40 bg-orange-500/10 p-6 text-sm text-orange-200">{error}</p>
+    return <p className="rounded-2xl border border-orange-500/40 bg-orange-500/10 p-6 text-sm text-orange-200">{error}</p>
   }
 
   if (!stats) {
@@ -63,7 +63,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="pixel-corners border border-purple-500/25 bg-card/70 p-4">
+        <div className="rounded-2xl border border-purple-500/25 bg-card/70 p-4">
           <h3 className="font-display text-base text-white">Новые заказы: {stats.newOrders}</h3>
           <ul className="scrollbar-pixel mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
             {stats.recentOrders.map((order) => {
@@ -73,7 +73,7 @@ const AdminDashboard = () => {
                   <span className="font-display text-purple-200">{order.code}</span>
                   <span className="truncate text-xs text-muted-foreground">{order.customer}</span>
                   <span className="font-display text-xs text-orange-300">{formatPrice(order.total)}</span>
-                  <span className="pixel-corners-sm px-2 py-0.5 text-[11px]" style={{ background: `${status?.tone || '#8b5cf6'}22`, color: status?.tone || '#8b5cf6' }}>
+                  <span className="rounded-xl px-2 py-0.5 text-[11px]" style={{ background: `${status?.tone || '#8b5cf6'}22`, color: status?.tone || '#8b5cf6' }}>
                     {status?.name || order.status}
                   </span>
                 </li>
@@ -83,7 +83,7 @@ const AdminDashboard = () => {
           </ul>
         </div>
 
-        <div className="pixel-corners border border-purple-500/25 bg-card/70 p-4">
+        <div className="rounded-2xl border border-purple-500/25 bg-card/70 p-4">
           <h3 className="font-display text-base text-white">Товары по категориям</h3>
           <ul className="mt-3 space-y-2.5">
             {stats.categoryCounts.map((item) => (
@@ -105,7 +105,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="pixel-corners border border-purple-500/25 bg-card/70 p-4">
+        <div className="rounded-2xl border border-purple-500/25 bg-card/70 p-4">
           <h3 className="font-display text-base text-white">Заканчивается на складе</h3>
           <ul className="mt-3 space-y-2">
             {stats.lowStock.map((product) => (
@@ -119,7 +119,7 @@ const AdminDashboard = () => {
           </ul>
         </div>
 
-        <div className="pixel-corners border border-purple-500/25 bg-card/70 p-4">
+        <div className="rounded-2xl border border-purple-500/25 bg-card/70 p-4">
           <h3 className="font-display text-base text-white">Топ рейтинга</h3>
           <ul className="mt-3 space-y-2">
             {stats.topProducts.map((product) => (

@@ -1,19 +1,19 @@
-// Наполнение БД PIXART MARKET: 4 категории + 16 товаров
-// Запуск: bun scripts/seed.js
+// Наполнение БД 13 STYLES: 4 категории + 16 товаров с мультяшными 3D рендерами
+// Запуск: bun scripts/seed.js (сначала генерирует картинки: bun run images:gen)
 
 import { db } from '../src/lib/db.js'
 import { CATEGORIES_SEED, CLOTHING_SIZES, SHOE_SIZES } from '../src/lib/constants.js'
 
-const img = (sprite, colorway) => [1, 2, 3].map((n) => `/products/${sprite}-${colorway}-${n}.svg`)
+const img = (slug) => [1, 2, 3].map((n) => `/products/${slug}-${n}.png`)
 
 const PRODUCTS = [
   {
     slug: 'hoodie-neo-violet',
-    name: 'Худи PIXART NEO Violet',
+    name: 'NEO Hoodie Violet',
     category: 'men',
     gender: 'men',
-    price: 4990,
-    oldPrice: 6990,
+    price: 59,
+    oldPrice: 79,
     label: 'hit',
     featured: true,
     stock: 24,
@@ -21,18 +21,17 @@ const PRODUCTS = [
     reviews: 128,
     sizes: CLOTHING_SIZES,
     colors: ['violet', 'orange', 'blue'],
-    images: img('hoodie', 'violet'),
-    shortDesc: 'Оверсайз-худи из плотного футера с пиксельным принтом и капюшоном на кулиске.',
+    shortDesc: 'Oversized heavyweight hoodie with a cartoon-print chest panel and drawstring hood.',
     description:
-      'Флагманское худи коллекции NEO. Плотный трёхниточный футер с начёсом, двойной капюшон на широких кулисках, карман-кенгуру с подкроем. Пиксель-арт принт устойчив к 50+ стиркам. Свободный крой оверсайз — садится идеально на подростковые и взрослые размеры от XS до XXL.',
+      'The flagship hoodie of the NEO collection. Thick brushed fleece, double-layer hood with wide drawstrings and a roomy kangaroo pocket. The cartoon print survives 50+ washes. Relaxed oversized cut that fits teens and adults from XS to XXL.',
   },
   {
-    slug: 'tshirt-pixel-drip-orange',
-    name: 'Футболка PIXEL DRIP Orange',
+    slug: 'tshirt-drip-orange',
+    name: 'DRIP Tee Orange',
     category: 'men',
     gender: 'men',
-    price: 1990,
-    oldPrice: 2990,
+    price: 19,
+    oldPrice: 29,
     label: 'sale',
     featured: false,
     stock: 40,
@@ -40,18 +39,17 @@ const PRODUCTS = [
     reviews: 86,
     sizes: CLOTHING_SIZES,
     colors: ['orange', 'blue', 'violet'],
-    images: img('tshirt', 'orange'),
-    shortDesc: 'Базовая футболка с рельефным пиксель-принтом и двойной строчкой по низу.',
+    shortDesc: 'Everyday tee with a raised cartoon graphic and double-stitched hem.',
     description:
-      'Классический силуэт с плечом, опущенным на 2 см — тренд стритвир-сцены. Кулирка 190 г/м² из гребенной пряжи не скатывается и держит форму. Принт DRIP нанесён методом шелкографии с PLW-топом.',
+      'Classic silhouette with a 2 cm dropped shoulder straight from the streetwear scene. 190 g/m² combed cotton jersey that keeps its shape wash after wash. The DRIP graphic is screen-printed with a soft-touch top coat.',
   },
   {
-    slug: 'bomber-cyber-wind-blue',
-    name: 'Бомбер CYBER WIND Blue',
+    slug: 'bomber-cyber-blue',
+    name: 'CYBER Bomber Blue',
     category: 'men',
     gender: 'men',
-    price: 8990,
-    oldPrice: 11990,
+    price: 89,
+    oldPrice: 119,
     label: 'new',
     featured: true,
     stock: 14,
@@ -59,17 +57,16 @@ const PRODUCTS = [
     reviews: 47,
     sizes: CLOTHING_SIZES,
     colors: ['blue', 'night', 'violet'],
-    images: img('jacket', 'blue'),
-    shortDesc: 'Бомбер на молнии с ветрозащитной мембраной и вязаными трикотажными манжетами.',
+    shortDesc: 'Zip-up bomber with a windproof membrane and knitted rib cuffs.',
     description:
-      'Ветрозащитный бомбер для прохладных вечеров. Мембрана 5000 мм, подкладка из гладкого нейлона, двусторонняя молния YKK. Трикотажные манжеты и низ в рубчик удерживают тепло. Скрытые карманы на молнии по бокам.',
+      'A windproof bomber for chilly evenings. 5000 mm membrane, smooth nylon lining and a two-way YKK zipper. Rib-knit cuffs and hem lock the warmth in. Hidden side zip pockets for your essentials.',
   },
   {
-    slug: 'jeans-grid-loose-blue',
-    name: 'Джинсы GRID LOOSE Blue',
+    slug: 'jeans-grid-blue',
+    name: 'GRID Baggy Jeans Blue',
     category: 'men',
     gender: 'men',
-    price: 5490,
+    price: 54,
     oldPrice: null,
     label: 'none',
     featured: false,
@@ -78,18 +75,17 @@ const PRODUCTS = [
     reviews: 64,
     sizes: CLOTHING_SIZES,
     colors: ['blue', 'night'],
-    images: img('pants', 'blue'),
-    shortDesc: 'Свободные джинсы из хлопка с посадкой baggy и контрастными отстрочками.',
+    shortDesc: 'Baggy-fit jeans in soft denim with contrast stitching.',
     description:
-      'Baggy-крой с высокой посадкой и широкым штаниной. Деним 12 унций из 100% хлопка, мягко заламывается по коленям. Контрастная жёлтая отстрочка, фирменные заклёпки и петли для ремня усиленного типа.',
+      'Baggy fit with a high rise and wide leg. 12 oz denim in 100% cotton that breaks in beautifully at the knees. Contrast golden stitching, branded rivets and reinforced belt loops.',
   },
   {
-    slug: 'dress-neon-midi-violet',
-    name: 'Платье NEON MIDI Violet',
+    slug: 'dress-neon-violet',
+    name: 'NEON Midi Dress Violet',
     category: 'women',
     gender: 'women',
-    price: 6990,
-    oldPrice: 8990,
+    price: 69,
+    oldPrice: 89,
     label: 'hit',
     featured: true,
     stock: 18,
@@ -97,17 +93,16 @@ const PRODUCTS = [
     reviews: 152,
     sizes: CLOTHING_SIZES,
     colors: ['violet', 'lilac', 'orange'],
-    images: img('dress', 'violet'),
-    shortDesc: 'Платье миди А-силуэта с неоновым пиксельным принтом и поясом в тон.',
+    shortDesc: 'A-line midi dress with a cartoon print and matching belt.',
     description:
-      'А-силуэт с завышенной талией визуально удлиняет силуэт. Вискозный трикотаж с эластаном мягко драпируется и не мнётся в дороге. Рукав-фонарик 3/4 и съёмный пояс в комплекте. Принт NEON светится под ультрафиолетом на вечеринках.',
+      'The A-line silhouette with a raised waist visually stretches the figure. Viscose jersey with a touch of elastane drapes softly and never wrinkles in your bag. Balloon sleeves in 3/4 length, detachable belt included. The NEON print glows under UV light at parties.',
   },
   {
-    slug: 'hoodie-pastel-glow-lilac',
-    name: 'Худи PASTEL GLOW Lilac',
+    slug: 'hoodie-pastel-lilac',
+    name: 'PASTEL GLOW Hoodie Lilac',
     category: 'women',
     gender: 'women',
-    price: 5290,
+    price: 52,
     oldPrice: null,
     label: 'new',
     featured: true,
@@ -116,18 +111,17 @@ const PRODUCTS = [
     reviews: 58,
     sizes: CLOTHING_SIZES,
     colors: ['lilac', 'orange', 'violet'],
-    images: img('hoodie', 'lilac'),
-    shortDesc: 'Пастельное худи кроп-посадки с широкими рукавами и вышивкой-глоу.',
+    shortDesc: 'Pastel cropped hoodie with wide sleeves and a glow-embroidery.',
     description:
-      'Мягчайшее худи из петельчатого трикотажа с начёсом. Кроп-посадка на 4 см выше классической, широкие рукава со спущенным плечом. Вышивка GLOW светящейся нитью: днём пастель, ночью — глоу-эффект.',
+      'The softest hoodie in brushed loopback cotton. Cropped fit sits 4 cm above the classic line, wide sleeves with dropped shoulders. The GLOW embroidery switches on at night: pastel by day, glow by night.',
   },
   {
-    slug: 'crop-pixel-chic-lilac',
-    name: 'Кроп-топ PIXEL CHIC Lilac',
+    slug: 'crop-chic-lilac',
+    name: 'CHIC Crop Top Lilac',
     category: 'women',
     gender: 'women',
-    price: 1790,
-    oldPrice: 2490,
+    price: 17,
+    oldPrice: 24,
     label: 'sale',
     featured: false,
     stock: 36,
@@ -135,17 +129,16 @@ const PRODUCTS = [
     reviews: 73,
     sizes: ['XS', 'S', 'M', 'L'],
     colors: ['lilac', 'violet', 'orange'],
-    images: img('tshirt', 'lilac'),
-    shortDesc: 'Укороченный топ из рибаны с пиксельным чипом на груди.',
+    shortDesc: 'Cropped ribbed top with a glossy cartoon chip print.',
     description:
-      'Плотная рибана держит форму и не просвечивает. Укороченный крой с двойным подгибом. Пиксельный чип-принт — отсылка к ретро-играм, нанесён гибкой краской, не трескается на сгибах.',
+      'Dense rib knit holds its shape and never goes see-through. Cropped cut with a double-turned hem. The glossy chip print is applied with flexible ink that never cracks in the folds.',
   },
   {
-    slug: 'jacket-retro-vibe-orange',
-    name: 'Куртка RETRO VIBE Orange',
+    slug: 'jacket-retro-orange',
+    name: 'RETRO VIBE Jacket Orange',
     category: 'women',
     gender: 'women',
-    price: 7990,
+    price: 79,
     oldPrice: null,
     label: 'new',
     featured: false,
@@ -154,18 +147,17 @@ const PRODUCTS = [
     reviews: 31,
     sizes: CLOTHING_SIZES,
     colors: ['orange', 'lilac'],
-    images: img('jacket', 'orange'),
-    shortDesc: 'Оверсайз-куртка с контрастными вставками и крупными пиксель-патчами.',
+    shortDesc: 'Oversized jacket with contrast inserts and big glossy patches.',
     description:
-      'Куртка свободного кроя из тканного дюспо с водонеотталкивающей пропиткой. Контрастные вставки на плечах и крупные термо-патчи в пиксельной стилистике. Внутренний карман для телефона с выходом под наушники.',
+      'Free-cut jacket in woven taslan with a water-repellent finish. Contrast shoulder inserts and large heat-pressed cartoon patches. Inner zip pocket with a cable pass-through for your phone.',
   },
   {
-    slug: 'sneakers-pixel-run-orange',
-    name: 'Кроссовки PIXEL RUN Orange',
+    slug: 'sneakers-run-orange',
+    name: 'RUN Sneakers Orange',
     category: 'shoes',
     gender: 'unisex',
-    price: 7990,
-    oldPrice: 9990,
+    price: 79,
+    oldPrice: 99,
     label: 'hit',
     featured: true,
     stock: 26,
@@ -173,17 +165,16 @@ const PRODUCTS = [
     reviews: 194,
     sizes: SHOE_SIZES,
     colors: ['orange', 'violet', 'blue'],
-    images: img('sneaker', 'orange'),
-    shortDesc: 'Беговые кроссовки с амортизирующей подошвой EVA и светоотражающими деталями.',
+    shortDesc: 'Running sneakers with a cushioning EVA midsole and reflective details.',
     description:
-      'Лёгкие кроссовки для города и лёгкого бега. Подошва EVA с пяточным гелем гасит ударные нагрузки, дышащий сетчатый верх держит стопу. Светоотражающие вставки на пятке и язычке — заметен в темноте. Съёмная анатомическая стелька.',
+      'Lightweight sneakers for the city and easy runs. The EVA midsole with a heel gel pad absorbs impact while the breathable mesh upper locks your foot in. Reflective inserts on the heel and tongue keep you visible after dark. Removable anatomical insole.',
   },
   {
-    slug: 'sneakers-grid-force-blue',
-    name: 'Кроссовки GRID FORCE Blue',
+    slug: 'sneakers-force-blue',
+    name: 'FORCE Sneakers Blue',
     category: 'shoes',
     gender: 'unisex',
-    price: 8490,
+    price: 84,
     oldPrice: null,
     label: 'hit',
     featured: false,
@@ -192,18 +183,17 @@ const PRODUCTS = [
     reviews: 88,
     sizes: SHOE_SIZES,
     colors: ['blue', 'night'],
-    images: img('sneaker', 'blue'),
-    shortDesc: 'Скид-стил кроссовки с жёсткой фиксацией и износостойкой резиной Vibra-Grip.',
+    shortDesc: 'Slip-style sneakers with firm lockdown and wear-proof Vibra-Grip rubber.',
     description:
-      'Минималистичный силуэт скид-стил из гладкой кожи с перфорацией. Усиленная пятка и плотная шнуровка фиксируют стопу при резких движениях. Резина Vibra-Grip не скользит на мокром асфальте.',
+      'Minimal slip-style silhouette in smooth perforated leather. A reinforced heel and dense lacing lock the foot in for sharp moves. Vibra-Grip rubber never slips on wet asphalt.',
   },
   {
-    slug: 'boots-urban-tactic-night',
-    name: 'Ботинки URBAN TACTIC Night',
+    slug: 'boots-urban-night',
+    name: 'URBAN Boots Night',
     category: 'shoes',
     gender: 'men',
-    price: 9490,
-    oldPrice: 11490,
+    price: 94,
+    oldPrice: 114,
     label: 'sale',
     featured: false,
     stock: 12,
@@ -211,17 +201,16 @@ const PRODUCTS = [
     reviews: 41,
     sizes: ['40', '41', '42', '43', '44', '45'],
     colors: ['night', 'blue'],
-    images: img('boot', 'night'),
-    shortDesc: 'Высокие ботинки с мембраной от промокания и протектором для скользких улиц.',
+    shortDesc: 'High boots with a waterproof membrane and a grip sole for wet streets.',
     description:
-      'Хайк-ботинки в тактическом стиле. Нубук с водоотталкивающей мембраной держит ноги сухими в дождь и мокрый снег. Протекторная подошва с глубиной протектора 5 мм, усиленный задник и быстрая шнуровка.',
+      'High-cut boots in a tactical mood. Water-repellent nubuck with a membrane keeps your feet dry in rain and wet snow. 5 mm lug tread sole, reinforced heel counter and speed lacing.',
   },
   {
-    slug: 'hightops-neon-storm-violet',
-    name: 'Хайтопы NEON STORM Violet',
+    slug: 'hightops-storm-violet',
+    name: 'STORM High-tops Violet',
     category: 'shoes',
     gender: 'women',
-    price: 8990,
+    price: 89,
     oldPrice: null,
     label: 'new',
     featured: true,
@@ -230,18 +219,17 @@ const PRODUCTS = [
     reviews: 39,
     sizes: ['36', '37', '38', '39', '40', '41'],
     colors: ['violet', 'lilac', 'orange'],
-    images: img('boot', 'violet'),
-    shortDesc: 'Высокие кеды с неоновыми шнурками и стёганой боковиной.',
+    shortDesc: 'High-top sneakers with chunky sole and quilted side panels.',
     description:
-      'Хайтопы на толстой подошве в стиле скеит-культуры. Канвас двойной плотности, стёганая боковина и металлические люверсы. Неоновые шнурки в комплекте плюс классические белые — меняй образ под настроение.',
+      'High-tops on a chunky sole straight from skate culture. Double-density canvas, quilted side panels and metal eyelets. Neon laces included plus classic white ones — switch the mood any day.',
   },
   {
-    slug: 'cap-pixel-drip-orange',
-    name: 'Кэп PIXEL DRIP Cap Orange',
+    slug: 'cap-drip-orange',
+    name: 'DRIP Cap Orange',
     category: 'accessories',
     gender: 'unisex',
-    price: 1990,
-    oldPrice: 2590,
+    price: 19,
+    oldPrice: 25,
     label: 'sale',
     featured: false,
     stock: 50,
@@ -249,17 +237,16 @@ const PRODUCTS = [
     reviews: 97,
     sizes: [],
     colors: ['orange', 'blue', 'violet'],
-    images: img('cap', 'orange'),
-    shortDesc: 'Бейсболка с глубоким козырьком, вышивкой-пиксель и регулируемым ремешком.',
+    shortDesc: 'Six-panel baseball cap with a deep brim and glossy embroidery.',
     description:
-      'Шестипанельная бейсболка из плотного твила. Глубокий изогнутый козырень защищает от солнца, вышивка DRIP выполнена объёмной нитью. Металлическая клипса ремешка регулирует обхват от 54 до 60 см.',
+      'Six-panel cap in dense twill. The deep pre-curved brim blocks the sun while the DRIP embroidery is done in raised thread. Metal clip on the back strap adjusts from 54 to 60 cm.',
   },
   {
-    slug: 'backpack-data-pack-violet',
-    name: 'Рюкзак DATA PACK Violet',
+    slug: 'backpack-data-violet',
+    name: 'DATA Pack Backpack Violet',
     category: 'accessories',
     gender: 'unisex',
-    price: 4990,
+    price: 49,
     oldPrice: null,
     label: 'hit',
     featured: true,
@@ -268,17 +255,16 @@ const PRODUCTS = [
     reviews: 143,
     sizes: [],
     colors: ['violet', 'orange', 'blue'],
-    images: img('backpack', 'violet'),
-    shortDesc: 'Городской рюкзак 22 л с отделением для ноутбука 15" и влагозащитой.',
+    shortDesc: '22 L city backpack with a 15" laptop sleeve and water-repellent shell.',
     description:
-      'Рюкзак для учёбы и прогулок: отделение для ноутбука 15", органайзер, потайной карман у спины. Корпус из рипстоп-нейлона с водоотталкивающей пропиткой, молнии с влагозащитными клапанами. Вентилируемая спинка и USB-порт для пауэрбанка.',
+      'A backpack for classes and hangouts: 15" laptop sleeve, organizer panel and a hidden back pocket. Ripstop nylon shell with a water-repellent finish, guarded zippers. Ventilated back panel and a pass-through port for your power bank.',
   },
   {
-    slug: 'sunglasses-cyber-shade-blue',
-    name: 'Очки CYBER SHADE Blue',
+    slug: 'sunglasses-cyber-blue',
+    name: 'CYBER Shades Blue',
     category: 'accessories',
     gender: 'unisex',
-    price: 2990,
+    price: 29,
     oldPrice: null,
     label: 'new',
     featured: false,
@@ -287,18 +273,17 @@ const PRODUCTS = [
     reviews: 52,
     sizes: [],
     colors: ['blue', 'violet', 'night'],
-    images: img('sunglasses', 'blue'),
-    shortDesc: 'Солнцезащитные очки визор-формы с поляризацией и UV400-фильтром.',
+    shortDesc: 'Visor sunglasses with polarized single lens and UV400 filter.',
     description:
-      'Очки-визор в кибер-стилистике: одна широкая линза, цельная оправа из полиамида. Поляризация убирает блики от асфальта и воды, фильтр UV400 блокирует UVA/UVB. В комплекте жёсткий кейс и салфетка из микрофибры.',
+      'Visor shades with a cyber mood: one wide lens in a single polyamide frame. Polarization kills asphalt and water glare while UV400 blocks UVA/UVB. Hard case and microfiber cloth included.',
   },
   {
-    slug: 'watch-pixel-time-orange',
-    name: 'Часы PIXEL TIME Orange',
+    slug: 'watch-time-orange',
+    name: 'TIME Watch Orange',
     category: 'accessories',
     gender: 'unisex',
-    price: 5990,
-    oldPrice: 7490,
+    price: 59,
+    oldPrice: 74,
     label: 'sale',
     featured: false,
     stock: 21,
@@ -306,15 +291,14 @@ const PRODUCTS = [
     reviews: 67,
     sizes: [],
     colors: ['orange', 'violet', 'night'],
-    images: img('watch', 'orange'),
-    shortDesc: 'Кварцевые часы с пиксельным циферблатом, сапфировым стеклом и браслетом-ремешком.',
+    shortDesc: 'Quartz watch with glossy dial, sapphire glass and silicone strap.',
     description:
-      'Часы с сегментным пиксель-циферблатом: индексы как в 8-битных играх. Японский кварцевый механизм Seiko, сапфировое стекло с антибликом. Силиконовый браслет-ремешок с пинами быстрой замены, водозащита 5 ATM.',
+      'A watch with a glossy segmented dial like a cartoon clock face. Japanese Seiko quartz movement, sapphire glass with anti-glare coat. Silicone strap with quick-release pins, 5 ATM water resistance.',
   },
 ]
 
 const main = async () => {
-  console.log('[seed] старт наполнения PIXART MARKET')
+  console.log('[seed] пополнение каталога 13 STYLES')
 
   const categoryIdBySlug = new Map()
   for (const category of CATEGORIES_SEED) {
@@ -326,6 +310,9 @@ const main = async () => {
     categoryIdBySlug.set(category.slug, row.id)
     console.log(`[seed] категория: ${row.name}`)
   }
+
+  // Полная замена товаров (старые пиксельные позиции больше не актуальны)
+  await db.product.deleteMany({})
 
   for (const product of PRODUCTS) {
     const categoryId = categoryIdBySlug.get(product.category)
@@ -340,7 +327,7 @@ const main = async () => {
       gender: product.gender,
       sizes: JSON.stringify(product.sizes),
       colors: JSON.stringify(product.colors),
-      images: JSON.stringify(product.images),
+      images: JSON.stringify(img(product.slug)),
       label: product.label,
       stock: product.stock,
       rating: product.rating,
@@ -349,7 +336,7 @@ const main = async () => {
       published: true,
       categoryId,
     }
-    await db.product.upsert({ where: { slug: product.slug }, create: data, update: data })
+    await db.product.create({ data })
     console.log(`[seed] товар: ${product.name}`)
   }
 

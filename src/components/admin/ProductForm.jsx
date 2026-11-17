@@ -5,7 +5,7 @@ import { Loader2, Upload, X, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import { GENDERS, LABELS, CLOTHING_SIZES, SHOE_SIZES } from '@/lib/constants'
-import PixelButton from '@/components/motion/PixelButton'
+import GlassButton from '@/components/motion/GlassButton'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -136,7 +136,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label className="text-xs text-purple-200">Название *</Label>
-          <Input required value={form.name} onChange={setField('name')} placeholder="Худи PIXART NEO" className="border-purple-500/30 bg-[#0d0c1c]" />
+          <Input required value={form.name} onChange={setField('name')} placeholder="NEO Hoodie Violet" className="border-purple-500/30 bg-[#0d0c1c]" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-purple-200">Slug (URL)</Label>
@@ -209,7 +209,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
               type="button"
               onClick={() => toggleSize(size)}
               aria-pressed={form.sizes.includes(size)}
-              className={`pixel-corners-sm px-2.5 py-1 font-display text-xs ${
+              className={`rounded-xl px-2.5 py-1 font-display text-xs ${
                 form.sizes.includes(size) ? 'bg-orange-500 text-white' : 'border border-purple-500/30 text-purple-200 hover:bg-purple-500/15'
               }`}
             >
@@ -227,7 +227,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
               key={colorway}
               type="button"
               onClick={() => setField('colors')([...new Set([...form.colors, colorway])])}
-              className="pixel-corners-sm border border-purple-500/30 px-2.5 py-1 text-xs text-purple-200 hover:bg-purple-500/15"
+              className="rounded-xl border border-purple-500/30 px-2.5 py-1 text-xs text-purple-200 hover:bg-purple-500/15"
             >
               + {colorway}
             </button>
@@ -257,7 +257,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
               </button>
             </span>
           ))}
-          <label className="pixel-corners-sm grid h-16 w-16 cursor-pointer place-items-center border border-dashed border-purple-500/50 text-purple-300 hover:bg-purple-500/10">
+          <label className="rounded-xl grid h-16 w-16 cursor-pointer place-items-center border border-dashed border-purple-500/50 text-purple-300 hover:bg-purple-500/10">
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
             <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={uploadFile} aria-label="Загрузить фото" />
           </label>
@@ -269,9 +269,9 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
             placeholder="/products/hoodie-violet-1.svg или https://…"
             className="h-9 border-purple-500/30 bg-[#0d0c1c] text-xs"
           />
-          <PixelButton type="button" tone="dark" className="h-9 px-4 text-xs" onClick={() => addImage(imageUrl.trim())}>
+          <GlassButton type="button" tone="dark" className="h-9 px-4 text-xs" onClick={() => addImage(imageUrl.trim())}>
             Добавить
-          </PixelButton>
+          </GlassButton>
         </div>
       </div>
 
@@ -287,11 +287,11 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
       </div>
 
       <div className="flex justify-end gap-2 border-t border-purple-500/20 pt-4">
-        <PixelButton type="button" tone="ghost" onClick={onCancel}>Отмена</PixelButton>
-        <PixelButton type="submit" tone="primary" disabled={saving}>
+        <GlassButton type="button" tone="ghost" onClick={onCancel}>Отмена</GlassButton>
+        <GlassButton type="submit" tone="primary" disabled={saving}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Save className="mr-2 h-4 w-4" aria-hidden />}
           Сохранить
-        </PixelButton>
+        </GlassButton>
       </div>
     </form>
   )

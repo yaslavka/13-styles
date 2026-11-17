@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "chat:dev": "cd mini-services/chat-service && bun run dev",
-    "assets": "bun scripts/generate-assets.js",
+    "images:gen": "bun scripts/generate-images.js",
+    "locales:gen": "bun scripts/generate-locales.js",
     "seed": "bun scripts/seed.js"
   },
   "dependencies": {

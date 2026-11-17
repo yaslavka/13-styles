@@ -1,74 +1,74 @@
 'use client'
 
-import { MessageCircle, Truck, RotateCcw, ShieldCheck, Zap, Heart } from 'lucide-react'
+import { MessageCircle, Truck, RotateCcw, ShieldCheck, Store } from 'lucide-react'
 import useShop from '@/store/useShop'
+import useT from '@/hooks/useT'
 import GradientText from '@/components/motion/GradientText'
 
-// Подвал: прижат к низу (mt-auto), навигация, инфо, возрастная метка
+// Подвал: прижат к низу (mt-auto), без технической информации о начинке сайта
 
 const Footer = () => {
   const navigate = useShop((state) => state.navigate)
   const setChatOpen = useShop((state) => state.setChatOpen)
+  const locale = useShop((state) => state.locale)
+  const t = useT()
 
   const columns = [
     {
-      title: 'Каталог',
+      title: t('footer.catalog'),
       links: [
-        { label: 'Мужская одежда', action: () => navigate('catalog', { query: { category: 'men' } }) },
-        { label: 'Женская одежда', action: () => navigate('catalog', { query: { category: 'women' } }) },
-        { label: 'Обувь', action: () => navigate('catalog', { query: { category: 'shoes' } }) },
-        { label: 'Аксессуары', action: () => navigate('catalog', { query: { category: 'accessories' } }) },
+        { label: t('footer.men'), action: () => navigate('catalog', { query: { category: 'men' } }) },
+        { label: t('footer.women'), action: () => navigate('catalog', { query: { category: 'women' } }) },
+        { label: t('footer.shoes'), action: () => navigate('catalog', { query: { category: 'shoes' } }) },
+        { label: t('footer.accessories'), action: () => navigate('catalog', { query: { category: 'accessories' } }) },
       ],
     },
     {
-      title: 'Магазин',
+      title: t('footer.shop'),
       links: [
-        { label: '13 стилей', action: () => navigate('styles') },
-        { label: 'Хиты продаж', action: () => navigate('catalog') },
-        { label: 'Админ-панель', action: () => navigate('admin') },
+        { label: t('footer.styles'), action: () => navigate('styles') },
+        { label: t('footer.hits'), action: () => navigate('catalog') },
+        { label: t('footer.admin'), action: () => navigate('admin') },
       ],
     },
     {
-      title: 'Помощь',
+      title: t('footer.help'),
       links: [
-        { label: 'Чат поддержки', action: () => setChatOpen(true) },
-        { label: 'Доставка и оплата', action: () => setChatOpen(true) },
-        { label: 'Возврат 14 дней', action: () => setChatOpen(true) },
+        { label: t('footer.chat'), action: () => setChatOpen(true) },
+        { label: t('footer.shipping'), action: () => setChatOpen(true) },
+        { label: t('footer.returns'), action: () => setChatOpen(true) },
       ],
     },
   ]
 
   const advantages = [
-    { icon: Truck, text: 'Доставка 1–3 дня' },
-    { icon: RotateCcw, text: 'Возврат 14 дней' },
-    { icon: ShieldCheck, text: 'Безопасная оплата' },
-    { icon: MessageCircle, text: 'Поддержка 24/7' },
+    { icon: Truck, text: t('adv.deliveryTitle') },
+    { icon: RotateCcw, text: t('adv.returnTitle') },
+    { icon: ShieldCheck, text: t('adv.paymentTitle') },
+    { icon: MessageCircle, text: t('adv.supportTitle') },
   ]
 
   return (
-    <footer className="mt-auto border-t border-purple-500/20 bg-[#06060d]/90 backdrop-blur-md">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <div className="grid gap-8 md:grid-cols-[1.3fr_1fr_1fr_1fr]">
+    <footer className="mt-auto border-t border-purple-400/15 bg-[#070614]/85 backdrop-blur-xl">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+        <div className="grid gap-10 md:grid-cols-[1.35fr_1fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="pixel-corners-sm grid h-8 w-8 place-items-center bg-gradient-to-br from-purple-600 to-orange-500">
-                <Zap className="h-4 w-4 text-white" aria-hidden />
+            <div className="flex items-center gap-2.5">
+              <span className="glass-btn glass-btn-primary grid h-10 w-10 place-items-center rounded-2xl">
+                <Store className="h-4.5 w-4.5 text-white" aria-hidden />
               </span>
-              <GradientText as="span" styleIndex={2} className="font-display text-lg font-bold">
-                PIXART MARKET
+              <GradientText as="span" styleIndex={2} className="font-display text-xl font-extrabold">
+                13 STYLES
               </GradientText>
             </div>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Пиксельный маркетплейс одежды, обуви и аксессуаров для подростков от 16 и взрослых до 50.
-              Полностью анимированные страницы, 13 фирменных градиентных стилей.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">{t('footer.about')}</p>
+            <div className="mt-5 flex flex-wrap gap-2">
               {advantages.map(({ icon: Icon, text }) => (
                 <span
                   key={text}
-                  className="pixel-corners-sm inline-flex items-center gap-1.5 border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-xs text-purple-200"
+                  className="glass-btn glass-btn-ghost inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-purple-200"
                 >
-                  <Icon className="h-3.5 w-3.5 text-orange-400" aria-hidden />
+                  <Icon className="h-3.5 w-3.5 text-orange-300" aria-hidden />
                   {text}
                 </span>
               ))}
@@ -77,8 +77,8 @@ const Footer = () => {
 
           {columns.map((column) => (
             <nav key={column.title} aria-label={column.title}>
-              <h3 className="font-display text-sm uppercase tracking-wider text-purple-300">{column.title}</h3>
-              <ul className="mt-3 space-y-2">
+              <h3 className="font-display text-sm font-bold uppercase tracking-wider text-purple-300">{column.title}</h3>
+              <ul className="mt-4 space-y-2.5">
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <button
@@ -95,17 +95,13 @@ const Footer = () => {
           ))}
         </div>
 
-        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-purple-500/15 pt-5 sm:flex-row">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} PIXART MARKET — сделано с
-            <Heart className="mx-1 inline h-3 w-3 text-orange-500" aria-hidden />
-            на Next.js + socket.io
-          </p>
+        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-purple-400/10 pt-6 sm:flex-row">
+          <p className="text-xs text-muted-foreground">{t('footer.rights', { year: new Date().getFullYear() })}</p>
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="pixel-corners-sm border border-orange-500/40 bg-orange-500/10 px-2 py-0.5 font-display text-orange-300">
+            <span className="rounded-full border border-orange-400/40 bg-orange-500/10 px-2.5 py-0.5 font-display font-semibold text-orange-300">
               16+
             </span>
-            Одежда и обувь для 16–50 лет
+            {t('footer.audience')}
           </p>
         </div>
       </div>

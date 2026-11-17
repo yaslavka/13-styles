@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MessageSquareText, X, SendHorizonal, Loader2 } from 'lucide-react'
 import useChat from '@/hooks/useChat'
 import useShop from '@/store/useShop'
+import useT from '@/hooks/useT'
 
-// Плавающий виджет чата поддержки: реальное время через socket.io
+// Плавающий виджет чата поддержки: реальное время через socket.io, стеклянный дизайн
 
-const QUICK_QUESTIONS = ['Где мой заказ?', 'Как вернуть товар?', 'Какие размеры у худи?', 'Есть ли скидки?']
+const QUICK_KEYS = ['chat.q1', 'chat.q2', 'chat.q3', 'chat.q4']
 
-const ROOM_KEY = 'pixart-chat-room'
+const ROOM_KEY = 'styles-chat-room'
 
 const getRoomId = () => {
   if (typeof window === 'undefined') return ''
@@ -25,12 +26,13 @@ const getRoomId = () => {
 const ChatWidget = () => {
   const chatOpen = useShop((state) => state.chatOpen)
   const setChatOpen = useShop((state) => state.setChatOpen)
+  const t = useT()
 
   const roomId = useMemo(() => getRoomId(), [])
   const { connected, supportOnline, messages, typingWho, sendUserMessage, notifyTyping } = useChat({
     role: 'user',
     roomId,
-    userName: 'Гость',
+    userName: 'Guest',
   })
 
   const [input, setInput] = useState('')
@@ -56,12 +58,12 @@ const ChatWidget = () => {
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.92 }}
         onClick={() => setChatOpen(!chatOpen)}
-        aria-label={chatOpen ? 'Закрыть чат поддержки' : 'Открыть чат поддержки'}
-        className="pixel-corners-sm fixed bottom-5 right-5 z-50 grid h-14 w-14 place-items-center bg-gradient-to-br from-purple-600 via-purple-500 to-orange-500 text-white shadow-[0_0_26px_rgba(139,92,246,0.6)]"
+        aria-label={chatOpen ? t('chat.close') : t('chat.open')}
+        className="glass-btn glass-btn-primary fixed bottom-6 right-6 z-50 grid h-15 w-15 place-items-center rounded-full"
       >
-        {chatOpen ? <X className="h-6 w-6" aria-hidden /> : <MessageSquareText className="h-6 w-6" aria-hidden />}
+        {chatOpen ? <X className="h-6 w-6 text-white" aria-hidden /> : <MessageSquareText className="h-6 w-6 text-white" aria-hidden />}
         {!chatOpen && supportOnline ? (
-          <span className="absolute -right-1 -top-1 h-3 w-3 bg-orange-400 animate-blink" aria-hidden />
+          <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full bg-orange-400 animate-blink" aria-hidden />
         ) : null}
       </motion.button>
 
@@ -72,22 +74,22 @@ const ChatWidget = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ duration: 0.22 }}
-            className="pixel-corners fixed bottom-24 right-5 z-50 flex h-[480px] w-[min(92vw,360px)] flex-col overflow-hidden border border-purple-500/40 bg-[#0a0918] shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
-            aria-label="Чат поддержки PIXART"
+            className="glass-card fixed bottom-26 right-6 z-50 flex h-[480px] w-[min(92vw,370px)] flex-col overflow-hidden"
+            aria-label="13 STYLES support chat"
           >
-            <header className="flex items-center gap-2.5 border-b border-purple-500/30 bg-gradient-to-r from-purple-900/50 to-orange-900/40 px-4 py-3">
-              <span className="pixel-corners-sm grid h-9 w-9 place-items-center bg-black/40 font-display text-xs text-purple-200">
-                PX
+            <header className="flex items-center gap-3 border-b border-white/10 bg-gradient-to-r from-purple-800/40 to-orange-800/30 px-4 py-3.5">
+              <span className="glass-btn glass-btn-primary grid h-10 w-10 place-items-center rounded-2xl font-display text-xs font-bold text-white">
+                13
               </span>
               <div className="flex-1">
-                <p className="font-display text-sm text-white">Поддержка PIXART</p>
-                <p className="flex items-center gap-1.5 text-[11px]">
+                <p className="font-display text-sm font-bold text-white">{t('chat.title')}</p>
+                <p className="flex items-center gap-1.5 text-[11px] font-bold">
                   <span
-                    className={`h-2 w-2 ${supportOnline && connected ? 'bg-green-400 animate-blink' : connected ? 'bg-orange-400' : 'bg-red-400'}`}
+                    className={`h-2.5 w-2.5 rounded-full ${supportOnline && connected ? 'bg-green-400 animate-blink' : connected ? 'bg-orange-400' : 'bg-red-400'}`}
                     aria-hidden
                   />
                   <span className="text-muted-foreground">
-                    {connected ? (supportOnline ? 'Оператор на линии' : 'Ждём оператора…') : 'Соединение…'}
+                    {connected ? (supportOnline ? t('chat.operatorOnline') : t('chat.waiting')) : t('chat.connecting')}
                   </span>
                 </p>
               </div>
@@ -95,40 +97,37 @@ const ChatWidget = () => {
                 type="button"
                 onClick={() => setChatOpen(false)}
                 className="text-muted-foreground hover:text-white"
-                aria-label="Закрыть чат"
+                aria-label={t('chat.close')}
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
             </header>
 
-            <div ref={scrollRef} className="scrollbar-pixel flex-1 space-y-2.5 overflow-y-auto px-4 py-3">
+            <div ref={scrollRef} className="scrollbar-glass flex-1 space-y-3 overflow-y-auto px-4 py-4">
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-8 text-center">
-                  <span className="font-display text-3xl text-purple-500/50 animate-blink">▚▞▚</span>
-                  <p className="text-xs text-muted-foreground">Спроси что угодно о товарах, доставке или возврате</p>
+                <div className="flex flex-col items-center gap-2.5 py-10 text-center">
+                  <span className="font-display text-3xl text-purple-400/50 animate-blink">✦ ✧ ✦</span>
+                  <p className="text-xs font-semibold text-muted-foreground">{t('chat.emptyHint')}</p>
                 </div>
               ) : null}
 
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+                <div key={message.id} className={`flex ${message.from === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`pixel-corners-sm max-w-[80%] px-3 py-2 text-sm leading-relaxed ${
+                    className={`max-w-[82%] px-4 py-2.5 text-sm font-semibold leading-relaxed ${
                       message.from === 'user'
-                        ? 'bg-gradient-to-br from-purple-600 to-purple-700 text-white'
-                        : 'border border-orange-500/30 bg-orange-500/10 text-orange-100'
+                        ? 'glass-btn glass-btn-primary rounded-3xl rounded-br-lg text-white'
+                        : 'glass-btn glass-btn-orange rounded-3xl rounded-bl-lg text-white'
                     }`}
                   >
                     {message.from !== 'user' ? (
-                      <span className="mb-0.5 block font-display text-[10px] uppercase tracking-wider text-orange-300">
-                        Поддержка
+                      <span className="mb-0.5 block font-display text-[10px] font-bold uppercase tracking-wider text-orange-100">
+                        {t('chat.support')}
                       </span>
                     ) : null}
                     {message.text}
-                    <span className="ml-2 align-bottom text-[10px] text-white/50">
-                      {new Date(message.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    <span className="ml-2 align-bottom text-[10px] font-bold text-white/60">
+                      {new Date(message.ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 </div>
@@ -136,24 +135,25 @@ const ChatWidget = () => {
 
               {typingWho === 'support' ? (
                 <div className="flex justify-start">
-                  <span className="pixel-corners-sm border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs text-orange-200">
-                    оператор печатает<span className="animate-blink">…</span>
+                  <span className="glass-btn glass-btn-ghost rounded-3xl px-4 py-2.5 text-xs font-bold text-purple-200">
+                    {t('chat.typingSupport')}
+                    <span className="animate-blink">…</span>
                   </span>
                 </div>
               ) : null}
             </div>
 
-            <div className="border-t border-purple-500/25 px-3 pb-3 pt-2">
+            <div className="border-t border-white/10 px-3 pb-3 pt-2.5">
               {messages.length === 0 ? (
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  {QUICK_QUESTIONS.map((question) => (
+                <div className="mb-2.5 flex flex-wrap gap-2">
+                  {QUICK_KEYS.map((key) => (
                     <button
-                      key={question}
+                      key={key}
                       type="button"
-                      onClick={() => send(question)}
-                      className="pixel-corners-sm border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-[11px] text-purple-200 transition-colors hover:bg-purple-500/25"
+                      onClick={() => send(t(key))}
+                      className="glass-btn glass-btn-ghost rounded-full px-3 py-1.5 text-[11px] font-bold text-purple-200"
                     >
-                      {question}
+                      {t(key)}
                     </button>
                   ))}
                 </div>
@@ -172,19 +172,19 @@ const ChatWidget = () => {
                     setInput(event.target.value)
                     notifyTyping()
                   }}
-                  placeholder={connected ? 'Сообщение…' : 'Подключаемся…'}
+                  placeholder={connected ? t('chat.placeholder') : t('chat.placeholderOff')}
                   disabled={!connected}
                   maxLength={1000}
-                  className="h-10 flex-1 rounded-md border border-purple-500/30 bg-[#0d0c1c] px-3 text-sm text-white placeholder:text-purple-300/40 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  aria-label="Текст сообщения"
+                  className="h-11 flex-1 rounded-full border border-white/20 bg-white/5 px-4 text-sm font-semibold text-white placeholder:text-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  aria-label={t('chat.placeholder')}
                 />
                 <button
                   type="submit"
                   disabled={!connected || !input.trim()}
-                  className="pixel-corners-sm grid h-10 w-10 place-items-center bg-gradient-to-br from-orange-500 to-purple-600 text-white disabled:opacity-40"
-                  aria-label="Отправить сообщение"
+                  className="glass-btn glass-btn-orange grid h-11 w-11 place-items-center rounded-full disabled:opacity-40"
+                  aria-label={t('chat.send')}
                 >
-                  {!connected ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <SendHorizonal className="h-4 w-4" aria-hidden />}
+                  {!connected ? <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden /> : <SendHorizonal className="h-4 w-4 text-white" aria-hidden />}
                 </button>
               </form>
             </div>

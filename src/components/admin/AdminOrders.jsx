@@ -48,7 +48,7 @@ const AdminOrders = () => {
           <Loader2 className="h-7 w-7 animate-spin text-purple-400" aria-label="Загрузка" />
         </div>
       ) : !items.length ? (
-        <p className="pixel-corners border border-purple-500/25 bg-card/70 p-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-2xl border border-purple-500/25 bg-card/70 p-8 text-center text-sm text-muted-foreground">
           Заказов пока нет — как только покупатель оформит первый, он появится здесь
         </p>
       ) : (
@@ -57,7 +57,7 @@ const AdminOrders = () => {
             const status = ORDER_STATUSES.find((item) => item.value === order.status)
             const isOpen = expanded === order.id
             return (
-              <div key={order.id} className="pixel-corners border border-purple-500/25 bg-card/70">
+              <div key={order.id} className="rounded-2xl border border-purple-500/25 bg-card/70">
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                   <button
                     type="button"
@@ -78,7 +78,7 @@ const AdminOrders = () => {
                     <p className="text-[11px] text-muted-foreground">{order.phone} · {order.address}</p>
                   </div>
                   <span className="font-display text-orange-300">{formatPrice(order.total)}</span>
-                  <span className="pixel-corners-sm px-2 py-0.5 text-[11px]" style={{ background: `${status?.tone || '#8b5cf6'}22`, color: status?.tone || '#8b5cf6' }}>
+                  <span className="rounded-xl px-2 py-0.5 text-[11px]" style={{ background: `${status?.tone || '#8b5cf6'}22`, color: status?.tone || '#8b5cf6' }}>
                     {status?.name || order.status}
                   </span>
                   <select

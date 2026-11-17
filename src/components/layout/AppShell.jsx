@@ -3,7 +3,8 @@
 import { useEffect, Suspense } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import useShop from '@/store/useShop'
-import PixelBackground from '@/components/layout/PixelBackground'
+import useCart from '@/store/useCart'
+import AnimatedBackground from '@/components/layout/AnimatedBackground'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import CartSheet from '@/components/cart/CartSheet'
@@ -20,15 +21,20 @@ import AdminView from '@/components/admin/AdminView'
 
 const AppShell = ({ initialProducts = [], initialCategories = [] }) => {
   const route = useShop((state) => state.route)
-  const accentStyle = useShop((state) => state.accentStyle)
   const syncRoute = useShop((state) => state.syncRoute)
+  const initLocale = useShop((state) => state.initLocale)
 
   useEffect(() => {
+    // Отложенная регидратация персист-состояний: первый рендер совпадает с SSR,
+    // сохранённые фильтры/язык/корзина подхватываются сразу после монтирования
+    useShop.persist.rehydrate()
+    useCart.persist.rehydrate()
     syncRoute()
+    initLocale()
     const onHashChange = () => syncRoute()
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
-  }, [syncRoute])
+  }, [syncRoute, initLocale])
 
   const renderView = () => {
     switch (route.view) {
@@ -56,16 +62,16 @@ const AppShell = ({ initialProducts = [], initialCategories = [] }) => {
 
   return (
     <div className="relative flex min-h-screen flex-col">
-      <PixelBackground />
+      <AnimatedBackground />
       <Header />
       <main className="flex-1" id="main-content">
         <AnimatePresence mode="wait">
           <motion.div
             key={transitionKey}
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -14 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           >
             <Suspense>
               {renderView()}

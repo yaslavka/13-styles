@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, Loader2, Package } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import { formatPrice } from '@/lib/constants'
-import PixelButton from '@/components/motion/PixelButton'
+import GlassButton from '@/components/motion/GlassButton'
 import ProductForm from '@/components/admin/ProductForm'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
@@ -72,9 +72,9 @@ const AdminProducts = ({ categories }) => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg text-white">Товары ({items.length})</h2>
-        <PixelButton tone="primary" onClick={openCreate}>
+        <GlassButton tone="primary" onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" aria-hidden /> Новый товар
-        </PixelButton>
+        </GlassButton>
       </div>
 
       {loading ? (
@@ -82,7 +82,7 @@ const AdminProducts = ({ categories }) => {
           <Loader2 className="h-7 w-7 animate-spin text-purple-400" aria-label="Загрузка" />
         </div>
       ) : (
-        <div className="scrollbar-pixel pixel-corners overflow-x-auto border border-purple-500/25 bg-card/70">
+        <div className="scrollbar-pixel rounded-2xl overflow-x-auto border border-purple-500/25 bg-card/70">
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-purple-500/25 text-left text-xs uppercase tracking-wider text-purple-300">

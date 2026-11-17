@@ -61,6 +61,7 @@ const useCart = create(
     {
       name: 'pixart-cart',
       storage: createJSONStorage(() => localStorage),
+      skipHydration: true,
     }
   )
 )

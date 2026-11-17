@@ -2,7 +2,7 @@
 
 import { styleTextGradient, STYLES } from '@/lib/constants'
 
-// Переливающийся градиентный текст в фирменных стилях PIXART
+// Переливающийся градиентный текст в фирменных стилях 13 STYLES
 
 const GradientText = ({ children, styleIndex = 2, as = 'span', shimmer = true, className = '' }) => {
   const Tag = as
