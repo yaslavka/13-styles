@@ -15,6 +15,7 @@ import HomeView from '@/components/home/HomeView'
 import CatalogView from '@/components/catalog/CatalogView'
 import ProductView from '@/components/product/ProductView'
 import CheckoutView from '@/components/cart/CheckoutView'
+import AccountView from '@/components/account/AccountView'
 import StylesView from '@/components/styles/StylesView'
 import AdminView from '@/components/admin/AdminView'
 
@@ -48,6 +49,8 @@ const AppShell = ({ initialProducts = [], initialCategories = [] }) => {
         return <ProductView />
       case 'checkout':
         return <CheckoutView />
+      case 'account':
+        return <AccountView />
       case 'styles':
         return <StylesView />
       case 'admin':

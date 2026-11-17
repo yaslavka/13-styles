@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Package, ShoppingCart, Wallet, Flame, Loader2, TrendingUp } from 'lucide-react'
+import { Package, ShoppingCart, Wallet, Flame, TrendingUp } from 'lucide-react'
 import API from '@/lib/api'
 import { formatPrice, styleGradient, ORDER_STATUSES } from '@/lib/constants'
 import Reveal from '@/components/motion/Reveal'
+import { StatSkeleton } from '@/components/ui/card-skeleton'
 
 // Обзор: ключевые метрики, малый остаток, последние заказы, распределение по категориям
 
@@ -45,8 +46,30 @@ const AdminDashboard = () => {
 
   if (!stats) {
     return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="h-7 w-7 animate-spin text-purple-400" aria-label="Загрузка статистики" />
+      <div className="space-y-6" aria-hidden>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <StatSkeleton key={index} />
+          ))}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-purple-500/25 bg-card/70 p-4">
+            <StatSkeleton />
+            <div className="mt-3 space-y-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-9 rounded-sm bg-white/5 animate-pulse" />
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-purple-500/25 bg-card/70 p-4">
+            <StatSkeleton />
+            <div className="mt-3 space-y-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-9 rounded-sm bg-white/5 animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

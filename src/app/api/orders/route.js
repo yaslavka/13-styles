@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import CACHE from '@/lib/cache'
+import USER_AUTH from '@/lib/userAuth'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,7 @@ const MAX_COMMENT_LENGTH = 500
 const MAX_ORDER_ITEMS = 30
 const MAX_QTY = 20
 const OUT_OF_STOCK_PREFIX = 'Недостаточно товара на складе'
+const PAYMENT_MODES = ['system', 'link']
 
 const badRequest = (message) => NextResponse.json({ error: message }, { status: 400 })
 
@@ -58,6 +60,17 @@ const POST = async (request) => {
       return badRequest(`В одном заказе не может быть больше ${MAX_ORDER_ITEMS} позиций`)
     }
 
+    // Режим оплаты: system — общая платёжная система, link — оплата по собственной
+    // ссылке товара (кнопка «Оплатить» у каждой позиции корзины)
+    const paymentMode = PAYMENT_MODES.includes(body.paymentMode) ? body.paymentMode : 'system'
+
+    // Авторизованный покупатель: заказ попадает в его личный кабинет (история заказов)
+    const authorizedUserId = USER_AUTH.requireUser(request)
+    const user = authorizedUserId
+      ? await db.user.findUnique({ where: { id: authorizedUserId } })
+      : null
+    const userId = user && !user.blocked && !user.banned ? user.id : null
+
     const cartItems = []
     for (const raw of rawItems) {
       const productId = Number(raw?.productId)
@@ -95,6 +108,7 @@ const POST = async (request) => {
         qty: item.qty,
         size: item.size,
         image: firstImage(row.images),
+        paidByLink: row.customPayment === true,
       }
     })
 
@@ -118,6 +132,8 @@ const POST = async (request) => {
         return tx.order.create({
           data: {
             code,
+            userId,
+            paymentMode,
             customer,
             phone,
             address,

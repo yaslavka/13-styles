@@ -40,6 +40,10 @@ const useCart = create(
               image: (product.images && product.images[0]) || '',
               size: size || '',
               qty: Math.min(MAX_QTY, qty),
+              // Собственная ссылка оплаты товара: если включена, «Оплатить» у позиции
+              // ведёт на неё вместо общей платёжной системы
+              customPayment: product.customPayment === true,
+              paymentUrl: product.paymentUrl || '',
             },
           ],
         })

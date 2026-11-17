@@ -10,6 +10,7 @@ import GlassButton from '@/components/motion/GlassButton'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { AdminCardSkeleton } from '@/components/ui/card-skeleton'
 
 // Категории товаров в админке: карточки + подгрузка по скроллу по 25 записей.
 // Создание и редактирование — прямо на странице, без модалок.
@@ -152,9 +153,9 @@ const AdminCategories = () => {
       ) : null}
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="glass-card h-36 animate-pulse" />
+            <AdminCardSkeleton key={index} className="h-36" />
           ))}
         </div>
       ) : (

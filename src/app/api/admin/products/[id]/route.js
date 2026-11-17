@@ -155,6 +155,10 @@ const PUT = async (request, context) => {
     if (body.published !== undefined) data.published = body.published === true
     if (body.decor !== undefined) data.decor = body.decor === true
 
+    // Собственная ссылка на оплату товара
+    if (body.paymentUrl !== undefined) data.paymentUrl = PAYLOAD.resolvePaymentUrl(body.paymentUrl)
+    if (body.customPayment !== undefined) data.customPayment = body.customPayment === true
+
     const updated = await db.product.update({
       where: { id },
       data,

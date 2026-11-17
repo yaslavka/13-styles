@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Package, EyeOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, Package, EyeOff, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useShop from '@/store/useShop'
@@ -11,9 +11,11 @@ import { formatPrice, styleGradient } from '@/lib/constants'
 import GlassButton from '@/components/motion/GlassButton'
 import { Switch } from '@/components/ui/switch'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { AdminCardSkeleton } from '@/components/ui/card-skeleton'
 
 // Товары админки: карточки (не таблица), подгрузка по скроллу по 25 записей.
-// Товар «нет в наличии» остаётся в списке, декор помечается специальным бейджем.
+// Товар «нет в наличии» остаётся в списке, декор помечается бейджем, товар со
+// собственной ссылкой оплаты — бейджем «своя оплата».
 
 const AdminProducts = () => {
   const navigate = useShop((state) => state.navigate)
@@ -60,9 +62,9 @@ const AdminProducts = () => {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="glass-card h-44 animate-pulse" />
+            <AdminCardSkeleton key={index} />
           ))}
         </div>
       ) : !items.length ? (
@@ -103,7 +105,14 @@ const AdminProducts = () => {
                       {product.decor ? ' · декор' : ''}
                       {product.subcategory ? ` · ${product.subcategory.name}` : ''}
                     </p>
-                    <p className="mt-0.5 truncate text-[11px] text-purple-300">{product.category?.name || '—'}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-purple-300">
+                      {product.category?.name || '—'}
+                      {product.customPayment ? (
+                        <span className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-300">
+                          <Link2 className="h-3 w-3" aria-hidden /> своя оплата
+                        </span>
+                      ) : null}
+                    </p>
 
                     <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1.5">
                       <span className="font-display text-sm font-bold text-orange-300">

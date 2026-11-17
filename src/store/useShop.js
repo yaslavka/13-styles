@@ -8,7 +8,7 @@ import { LOCALE_CODES, detectLocale } from '@/lib/i18n'
 // Глобальный стор маршрутизации (SPA на единственном маршруте /) и UI-состояния.
 // Фильтры, язык и активный стиль сохраняются в localStorage и переживают перезагрузку.
 
-const KNOWN_VIEWS = ['catalog', 'product', 'checkout', 'admin', 'styles']
+const KNOWN_VIEWS = ['catalog', 'product', 'checkout', 'account', 'admin', 'styles']
 
 const parseQuery = (raw) => {
   const query = {}

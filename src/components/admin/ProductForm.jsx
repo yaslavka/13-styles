@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Upload, X, Save } from 'lucide-react'
+import { Loader2, Upload, X, Save, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import { GENDERS, LABELS, CLOTHING_SIZES, SHOE_SIZES } from '@/lib/constants'
@@ -41,6 +41,9 @@ const EMPTY_FORM = {
   featured: false,
   published: true,
   decor: false,
+  // Собственная ссылка на оплату: платим по ней вместо общей платёжной системы
+  customPayment: false,
+  paymentUrl: '',
 }
 
 const ProductForm = ({ product, categories, onSaved, onCancel }) => {
@@ -57,6 +60,8 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         categoryId: String(product.categoryId ?? product.category?.id ?? ''),
         subcategoryId: product.subcategoryId ? String(product.subcategoryId) : '',
         oldPrice: product.oldPrice ?? '',
+        customPayment: product.customPayment === true,
+        paymentUrl: product.paymentUrl || '',
       })
     } else {
       setForm({ ...EMPTY_FORM, categoryId: categories[0] ? String(categories[0].id) : '' })
@@ -138,6 +143,8 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         featured: form.featured,
         published: form.published,
         decor: form.decor,
+        customPayment: form.customPayment,
+        paymentUrl: form.paymentUrl,
       }
       const data = product
         ? await API.admin.put(`/api/admin/products/${product.id}`, payload)
@@ -320,6 +327,35 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
             Добавить
           </GlassButton>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-purple-500/25 bg-purple-500/5 p-4">
+        <p className="mb-1 flex items-center gap-2 font-display text-sm font-bold text-purple-200">
+          <CreditCard className="h-4 w-4 text-orange-300" aria-hidden />
+          Оплата товара
+        </p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          По умолчанию товар оплачивается через общую платёжную систему. Включите переключатель,
+          если у этого товара собственная ссылка на оплату.
+        </p>
+        <label className="flex items-center gap-2 text-sm text-purple-200">
+          <Switch checked={form.customPayment} onCheckedChange={setField('customPayment')} aria-label="Оплата по собственной ссылке" />
+          Оплачивается по собственной ссылке (не по общей платёжной системе)
+        </label>
+        {form.customPayment ? (
+          <div className="mt-3 space-y-1.5">
+            <Label className="text-xs text-purple-200">Ссылка на оплату *</Label>
+            <Input
+              value={form.paymentUrl}
+              onChange={setField('paymentUrl')}
+              placeholder="https://pay.example.com/my-product-13"
+              className="border-purple-500/30 bg-[#0d0c1c]"
+              type="url"
+              required
+            />
+            <p className="text-xs text-muted-foreground">Откроется в новой вкладке, когда покупатель нажмёт «Оплатить» у этого товара в корзине.</p>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-x-6 gap-y-3 pt-1">

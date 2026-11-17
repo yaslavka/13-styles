@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Loader2, ReceiptText } from 'lucide-react'
+import { ChevronDown, ChevronUp, ReceiptText } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useInfiniteList from '@/hooks/useInfiniteList'
 import { formatPrice, ORDER_STATUSES, styleGradient } from '@/lib/constants'
+import { OrderCardSkeleton } from '@/components/ui/card-skeleton'
 
 // Заказы админки: карточки (не таблица), состав раскрывается, подгрузка по скроллу по 25 записей
 
@@ -35,8 +36,10 @@ const AdminOrders = () => {
       <h2 className="font-display text-lg text-white">Заказы ({total})</h2>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-7 w-7 animate-spin text-purple-400" aria-label="Загрузка" />
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2" aria-hidden>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <OrderCardSkeleton key={index} />
+          ))}
         </div>
       ) : !items.length ? (
         <div className="glass-panel flex flex-col items-center gap-3 py-16 text-center">

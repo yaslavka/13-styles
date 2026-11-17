@@ -54,6 +54,9 @@ const toProductDTO = (row) => ({
   featured: row.featured,
   published: row.published,
   decor: row.decor,
+  // Собственная ссылка на оплату товара (customPayment = true → платим по paymentUrl)
+  paymentUrl: row.paymentUrl || '',
+  customPayment: row.customPayment === true,
   subcategoryId: row.subcategoryId ?? null,
   subcategory: row.subcategory
     ? { id: row.subcategory.id, slug: row.subcategory.slug, name: row.subcategory.name }
@@ -67,6 +70,8 @@ const toProductDTO = (row) => ({
 const toOrderDTO = (row) => ({
   id: row.id,
   code: row.code,
+  userId: row.userId ?? null,
+  paymentMode: row.paymentMode || 'system',
   customer: row.customer,
   phone: row.phone,
   address: row.address,
@@ -77,13 +82,33 @@ const toOrderDTO = (row) => ({
   createdAt: row.createdAt ? row.createdAt.toISOString() : null,
 })
 
+// Публичный профиль: без пароля, с флагами блокировки (нужны кабинету и админке)
 const toUserDTO = (row) => ({
   id: row.id,
   login: row.login,
   name: row.name,
+  blocked: row.blocked === true,
+  banned: row.banned === true,
   createdAt: row.createdAt ? row.createdAt.toISOString() : null,
 })
 
-const DTO = { toProductDTO, toCategoryDTO, toSubcategoryDTO, toOrderDTO, toUserDTO }
+// Карточка пользователя в админке: плюс количество заказов
+const toAdminUserDTO = (row) => ({
+  ...toUserDTO(row),
+  orderCount: row._count ? row._count.orders : null,
+})
+
+const toPaymentMethodDTO = (row) => ({
+  id: row.id,
+  userId: row.userId,
+  label: row.label,
+  brand: row.brand,
+  last4: row.last4,
+  expiry: row.expiry,
+  isDefault: row.isDefault === true,
+  createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+})
+
+const DTO = { toProductDTO, toCategoryDTO, toSubcategoryDTO, toOrderDTO, toUserDTO, toAdminUserDTO, toPaymentMethodDTO }
 
 export default DTO

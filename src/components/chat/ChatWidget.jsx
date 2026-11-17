@@ -59,7 +59,7 @@ const ChatWidget = () => {
         whileTap={{ scale: 0.92 }}
         onClick={() => setChatOpen(!chatOpen)}
         aria-label={chatOpen ? t('chat.close') : t('chat.open')}
-        className="glass-btn glass-btn-primary fixed bottom-6 right-6 z-[70] grid h-15 w-15 place-items-center rounded-full"
+        className="glass-btn glass-btn-primary fixed bottom-6 right-6 z-40 grid h-15 w-15 place-items-center rounded-full"
       >
         {chatOpen ? <X className="h-6 w-6 text-white" aria-hidden /> : <MessageSquareText className="h-6 w-6 text-white" aria-hidden />}
         {!chatOpen && supportOnline ? (
@@ -74,7 +74,7 @@ const ChatWidget = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ duration: 0.22 }}
-            className="glass-card fixed bottom-26 right-6 z-[70] flex h-[480px] w-[min(92vw,370px)] flex-col overflow-hidden"
+            className="glass-card fixed bottom-26 right-6 z-40 flex h-[480px] w-[min(92vw,370px)] flex-col overflow-hidden"
             aria-label="13 STYLES support chat"
           >
             <header className="flex items-center gap-3 border-b border-white/10 bg-gradient-to-r from-purple-800/40 to-orange-800/30 px-4 py-3.5">

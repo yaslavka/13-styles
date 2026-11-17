@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react'
+import { SlidersHorizontal, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import useShop from '@/store/useShop'
 import useDebounce from '@/hooks/useDebounce'
@@ -12,6 +12,7 @@ import { SORT_OPTIONS, GENDERS, CLOTHING_SIZES, SHOE_SIZES, PRICE_LIMITS, PAGE_S
 import ProductGrid from '@/components/product/ProductGrid'
 import GlassButton from '@/components/motion/GlassButton'
 import Reveal from '@/components/motion/Reveal'
+import { ProductGridSkeleton } from '@/components/ui/card-skeleton'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -61,7 +62,7 @@ const CatalogView = ({ categories = [] }) => {
     [filters]
   )
 
-  const { items, total, loading, loadingMore, sentinelRef } = useInfiniteList({
+  const { items, total, loading, loadingMore, hasMore, sentinelRef } = useInfiniteList({
     buildUrl,
     fetcher: API.get,
     onError: (error) => toast.error(t('toast.loadError'), { description: error.message }),
@@ -225,11 +226,7 @@ const CatalogView = ({ categories = [] }) => {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="glass-card aspect-[3/4] animate-pulse" />
-          ))}
-        </div>
+        <ProductGridSkeleton count={8} />
       ) : (
         <>
           <ProductGrid products={items} />
@@ -237,12 +234,12 @@ const CatalogView = ({ categories = [] }) => {
           {/* Маркер бесконечной подгрузки */}
           <div ref={sentinelRef} className="h-2" aria-hidden />
 
-          <div className="mt-8 flex min-h-16 items-center justify-center" aria-live="polite">
-            {loadingMore ? (
-              <span className="flex items-center gap-2 font-display text-sm font-bold text-purple-300">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                {t('catalog.loading')}
-              </span>
+          {/* Скелеты следующей партии карточек */}
+          {loadingMore ? <ProductGridSkeleton count={4} /> : null}
+
+          <div className="mt-6 flex min-h-10 items-center justify-center" aria-live="polite">
+            {!loadingMore && !hasMore && items.length > 0 ? (
+              <span className="font-display text-sm font-bold text-purple-300">{t('catalog.loadedAll')}</span>
             ) : null}
           </div>
         </>

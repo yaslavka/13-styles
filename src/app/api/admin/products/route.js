@@ -108,6 +108,9 @@ const POST = async (request) => {
         featured: body.featured === true,
         published: body.published === undefined ? true : body.published === true,
         decor: body.decor === true,
+        // Собственная ссылка на оплату товара
+        paymentUrl: PAYLOAD.resolvePaymentUrl(body.paymentUrl),
+        customPayment: body.customPayment === true,
         subcategoryId: subcategory.id,
         categoryId,
       },

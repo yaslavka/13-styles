@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ShoppingCart, MessageSquareText, Search, Menu, X, Store, Globe, Check, UserRound, LogOut } from 'lucide-react'
+import { ShoppingCart, MessageSquareText, Search, Menu, X, Globe, Check, UserRound, LogOut, Settings, ReceiptText, CreditCard } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -67,11 +67,8 @@ const Header = () => {
           type="button"
           onClick={() => go({ view: 'home' })}
           className="flex shrink-0 items-center gap-2.5 focus-visible:outline-none"
-          aria-label="13 STYLES — home"
+          aria-label="13 STYLES — main screen"
         >
-          <span className="glass-btn glass-btn-primary grid h-11 w-11 place-items-center rounded-2xl">
-            <Store className="h-5 w-5 text-white" aria-hidden />
-          </span>
           <span className="hidden flex-col leading-none sm:flex">
             <GradientText as="span" styleIndex={2} className="font-display text-2xl font-extrabold">
               13 STYLES
@@ -156,6 +153,33 @@ const Header = () => {
                 <DropdownMenuItem asChild>
                   <button
                     type="button"
+                    onClick={() => go({ view: 'account' })}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-purple-100/80 transition-colors hover:bg-white/10"
+                  >
+                    <Settings className="h-4 w-4 text-orange-300" aria-hidden /> {t('account.title')}
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <button
+                    type="button"
+                    onClick={() => go({ view: 'account', query: { tab: 'orders' } })}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-purple-100/80 transition-colors hover:bg-white/10"
+                  >
+                    <ReceiptText className="h-4 w-4 text-orange-300" aria-hidden /> {t('account.orders')}
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <button
+                    type="button"
+                    onClick={() => go({ view: 'account', query: { tab: 'payments' } })}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-purple-100/80 transition-colors hover:bg-white/10"
+                  >
+                    <CreditCard className="h-4 w-4 text-orange-300" aria-hidden /> {t('account.payments')}
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <button
+                    type="button"
                     onClick={logout}
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-purple-100/80 transition-colors hover:bg-white/10"
                   >
@@ -186,20 +210,27 @@ const Header = () => {
             <MessageSquareText className="h-5 w-5" aria-hidden />
           </Button>
 
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.9 }}
-            onClick={cartOpen}
-            className="glass-btn glass-btn-orange relative grid h-11 w-11 place-items-center rounded-full"
-            aria-label={`${t('header.cart')}, ${cartCount}`}
-          >
-            <ShoppingCart className="h-5 w-5 text-white" aria-hidden />
+          {/* Бейдж количества живёт вне стеклянной кнопки (у .glass-btn overflow:hidden
+              обрезал двухзначные числа) */}
+          <span className="relative inline-flex shrink-0">
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.9 }}
+              onClick={cartOpen}
+              className="glass-btn glass-btn-orange grid h-11 w-11 place-items-center rounded-full"
+              aria-label={`${t('header.cart')}, ${cartCount}`}
+            >
+              <ShoppingCart className="h-5 w-5 text-white" aria-hidden />
+            </motion.button>
             {cartCount > 0 ? (
-              <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-orange-500 px-1 text-[11px] font-bold text-white shadow-lg animate-pop">
-                {cartCount}
+              <span
+                className="absolute -right-1.5 -top-1.5 z-10 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#08081a] bg-orange-500 px-1 text-[11px] font-bold leading-none text-white shadow-lg animate-pop"
+                aria-hidden
+              >
+                {cartCount > 99 ? '99+' : cartCount}
               </span>
             ) : null}
-          </motion.button>
+          </span>
 
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
@@ -231,13 +262,23 @@ const Header = () => {
                     {t(link.key)}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={openAuth}
-                  className="glass-btn glass-btn-ghost mt-4 flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left font-display text-base text-orange-200"
-                >
-                  <UserRound className="h-4 w-4" aria-hidden /> {user ? user.name : t('auth.title')}
-                </button>
+                {user ? (
+                  <button
+                    type="button"
+                    onClick={() => go({ view: 'account' })}
+                    className="glass-btn glass-btn-ghost mt-4 flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left font-display text-base text-orange-200"
+                  >
+                    <Settings className="h-4 w-4" aria-hidden /> {t('account.title')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openAuth}
+                    className="glass-btn glass-btn-ghost mt-4 flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left font-display text-base text-orange-200"
+                  >
+                    <UserRound className="h-4 w-4" aria-hidden /> {t('auth.title')}
+                  </button>
+                )}
               </nav>
             </SheetContent>
           </Sheet>

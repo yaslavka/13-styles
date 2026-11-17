@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Package, Shapes, GitBranch, PackagePlus, ShoppingCart, MessagesSquare, ArrowLeft, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, Shapes, GitBranch, PackagePlus, ShoppingCart, MessagesSquare, Users, ArrowLeft, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useShop from '@/store/useShop'
@@ -12,11 +12,12 @@ import AdminCategories from '@/components/admin/AdminCategories'
 import AdminSubcategories from '@/components/admin/AdminSubcategories'
 import AdminProductFormPage from '@/components/admin/AdminProductFormPage'
 import AdminOrders from '@/components/admin/AdminOrders'
+import AdminUsers from '@/components/admin/AdminUsers'
 import AdminChat from '@/components/admin/AdminChat'
 import GradientText from '@/components/motion/GradientText'
 
 // Админ-панель 13 STYLES: сайдбар со страницами (главная, товары, категории,
-// подкатегории, форма добавления товара, заказы, чат) + контент раздела
+// подкатегории, форма добавления товара, заказы, пользователи, чат) + контент раздела
 
 const ADMIN_SECTIONS = [
   { slug: '', label: 'Главная', icon: LayoutDashboard },
@@ -25,6 +26,7 @@ const ADMIN_SECTIONS = [
   { slug: 'subcategories', label: 'Подкатегории товаров', icon: GitBranch },
   { slug: 'product-new', label: 'Форма добавления товара', icon: PackagePlus },
   { slug: 'orders', label: 'Заказы', icon: ShoppingCart },
+  { slug: 'users', label: 'Пользователи', icon: Users },
   { slug: 'chat', label: 'Чат поддержки', icon: MessagesSquare },
 ]
 
@@ -94,6 +96,8 @@ const AdminPanel = () => {
         return <AdminProductFormPage editId={route.query.id || ''} />
       case 'orders':
         return <AdminOrders />
+      case 'users':
+        return <AdminUsers />
       case 'chat':
         return <AdminChat />
       default:

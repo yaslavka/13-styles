@@ -58,6 +58,9 @@ model Product {
   published   Boolean  @default(true)
   // Товар-декор: участвует в анимации главной, но скрывается из списков каталога
   decor       Boolean  @default(false)
+  // Собственная ссылка на оплату товара
+  paymentUrl    String   @default("") @db.VarChar(500)
+  customPayment Boolean  @default(false)
   categoryId  Int
   category      Category      @relation(fields: [categoryId], references: [id])
   subcategoryId Int?
@@ -75,13 +78,38 @@ model User {
   name         String   @default("") @db.VarChar(80)
   // scrypt: хранится как "salt:hash"
   passwordHash String   @db.VarChar(200)
+  // blocked — блокировка входа (можно снять), banned — бан аккаунта навсегда
+  blocked      Boolean  @default(false)
+  banned       Boolean  @default(false)
+  orders         Order[]
+  paymentMethods PaymentMethod[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// Способ оплаты покупателя (маскированные данные карты, без полного номера)
+model PaymentMethod {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String   @db.VarChar(120)
+  brand     String   @default("card") @db.VarChar(32)
+  last4     String   @default("") @db.VarChar(4)
+  expiry    String   @default("") @db.VarChar(8)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Order {
   id        Int      @id @default(autoincrement())
   code      String   @unique @db.VarChar(40)
+  // null для гостевых заказов без авторизации
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // system — общая платёжная система, link — оплата по собственной ссылке товара
+  paymentMode String @default("system") @db.VarChar(16)
   customer  String   @db.VarChar(120)
   phone     String   @db.VarChar(32)
   address   String   @db.VarChar(255)
@@ -93,4 +121,5 @@ model Order {
 
   @@index([status])
   @@index([createdAt])
+  @@index([userId])
 }

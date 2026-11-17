@@ -44,7 +44,8 @@ const CheckoutView = () => {
         comment: form.comment,
         items: items.map((item) => ({ productId: item.productId, qty: item.qty, size: item.size })),
       }
-      const data = await API.post('/api/orders', payload)
+      // user.post: заказ привязывается к аккаунту, когда покупатель авторизован
+      const data = await API.user.post('/api/orders', payload)
       clear()
       setDone(data.order)
       toast.success(t('toast.orderPlaced'), { description: t('toast.orderCode', { code: data.order.code }) })

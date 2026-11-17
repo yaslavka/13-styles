@@ -21,6 +21,14 @@ const POST = async (request) => {
       return NextResponse.json({ error: 'Неверный логин или пароль' }, { status: 401 })
     }
 
+    // Заблокированные и забаненные аккаунты не проходят
+    if (user.banned) {
+      return NextResponse.json({ error: 'Аккаунт забанен администратором' }, { status: 403 })
+    }
+    if (user.blocked) {
+      return NextResponse.json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' }, { status: 403 })
+    }
+
     return NextResponse.json({ token: USER_AUTH.issueToken(user.id), user: DTO.toUserDTO(user) })
   } catch (error) {
     console.error('[api/auth/login] ошибка входа:', error?.message || error)

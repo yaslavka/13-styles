@@ -18,6 +18,11 @@ const GET = async (request) => {
       return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
     }
 
+    // Заблокирован или забанен — токен больше не действителен
+    if (user.blocked || user.banned) {
+      return NextResponse.json({ error: 'Аккаунт заблокирован' }, { status: 403 })
+    }
+
     return NextResponse.json({ user: DTO.toUserDTO(user) })
   } catch (error) {
     console.error('[api/auth/me] ошибка запроса профиля:', error?.message || error)

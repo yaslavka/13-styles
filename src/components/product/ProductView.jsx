@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, ShoppingCart, Star, Truck, RotateCcw, Loader2, ShieldCheck, ZoomIn } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
+import { Skeleton } from '@/components/ui/skeleton'
 import useShop from '@/store/useShop'
 import useCart from '@/store/useCart'
 import useHoverSlider from '@/hooks/useHoverSlider'
@@ -91,12 +92,29 @@ const ProductView = () => {
 
   if (loading) {
     return (
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2">
-        <div className="glass-card aspect-square animate-pulse" />
-        <div className="space-y-4">
-          <div className="h-12 w-3/4 animate-pulse rounded-2xl bg-white/10" />
-          <div className="h-7 w-1/3 animate-pulse rounded-2xl bg-white/10" />
-          <div className="h-28 w-full animate-pulse rounded-2xl bg-white/10" />
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2" aria-hidden>
+        <div className="glass-card overflow-hidden rounded-[1.8rem]">
+          <Skeleton className="aspect-square w-full rounded-none bg-white/10" />
+          <div className="mt-4 grid grid-cols-3 gap-4 px-4">
+            <Skeleton className="aspect-square rounded-2xl bg-white/10" />
+            <Skeleton className="aspect-square rounded-2xl bg-white/10" />
+            <Skeleton className="aspect-square rounded-2xl bg-white/10" />
+          </div>
+        </div>
+        <div className="space-y-5">
+          <div className="flex gap-2">
+            <Skeleton className="h-7 w-28 rounded-full bg-white/10" />
+            <Skeleton className="h-7 w-24 rounded-full bg-white/10" />
+          </div>
+          <Skeleton className="h-12 w-3/4 rounded-2xl bg-white/10" />
+          <Skeleton className="h-4 w-full rounded-2xl bg-white/10" />
+          <Skeleton className="h-4 w-2/3 rounded-2xl bg-white/10" />
+          <Skeleton className="h-10 w-40 rounded-2xl bg-white/10" />
+          <div className="flex gap-3 pt-2">
+            <Skeleton className="h-12 w-36 rounded-full bg-white/10" />
+            <Skeleton className="h-12 w-36 rounded-full bg-white/10" />
+          </div>
+          <Skeleton className="h-44 w-full rounded-2xl bg-white/10" />
         </div>
       </div>
     )

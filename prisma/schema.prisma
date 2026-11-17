@@ -62,6 +62,10 @@ model Product {
   published   Boolean  @default(true)
   // Товар-декор: участвует в анимации главной, но скрывается из списков каталога
   decor       Boolean  @default(false)
+  // Собственная ссылка на оплату: если customPayment = true, кнопка «Оплатить»
+  // у товара ведёт на paymentUrl, а не на общую платёжную систему
+  paymentUrl    String  @default("")
+  customPayment Boolean @default(false)
   categoryId  Int
   category    Category      @relation(fields: [categoryId], references: [id])
   subcategoryId Int?
@@ -77,14 +81,37 @@ model User {
   name         String   @default("")
   // scrypt: хранится как "salt:hash"
   passwordHash String
+  // blocked — блокировка входа (можно снять), banned — бан аккаунта навсегда
+  blocked      Boolean  @default(false)
+  banned       Boolean  @default(false)
+  orders         Order[]
+  paymentMethods PaymentMethod[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// Способ оплаты покупателя (маскированные данные карты, без полного номера)
+model PaymentMethod {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String
+  brand     String   @default("card")
+  last4     String   @default("")
+  expiry    String   @default("")
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 // Заказ покупателя
 model Order {
   id        Int      @id @default(autoincrement())
   code      String   @unique
+  // null для гостевых заказов без авторизации
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // system — общая платёжная система, link — оплата по собственной ссылке товара
+  paymentMode String @default("system")
   customer  String
   phone     String
   address   String

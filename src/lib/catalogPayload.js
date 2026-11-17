@@ -43,6 +43,14 @@ const resolveOldPrice = (value, price) => {
   return Number.isFinite(old) && old > price ? old : null
 }
 
+// Собственная ссылка на оплату: http(s)-URL либо пустая строка
+const MAX_PAYMENT_URL_LENGTH = 500
+const resolvePaymentUrl = (raw) => {
+  if (typeof raw !== 'string') return ''
+  const url = raw.trim().slice(0, MAX_PAYMENT_URL_LENGTH)
+  return /^https?:\/\/\S+$/i.test(url) ? url : ''
+}
+
 // Проверка категории: возвращает id либо null
 const resolveCategoryId = async (db, raw) => {
   const id = Number(raw)
@@ -76,6 +84,7 @@ const CATALOG_PAYLOAD = {
   isValidName,
   isValidPrice,
   resolveOldPrice,
+  resolvePaymentUrl,
   resolveCategoryId,
   resolveSubcategoryId,
 }

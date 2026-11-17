@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Loader2, PackagePlus } from 'lucide-react'
+import { ArrowLeft, PackagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useShop from '@/store/useShop'
 import ProductForm from '@/components/admin/ProductForm'
 import GlassButton from '@/components/motion/GlassButton'
 import GradientText from '@/components/motion/GradientText'
+import { FormSkeleton } from '@/components/ui/card-skeleton'
 
 // Страница формы товара в админке: добавление и редактирование (не модалка)
 
@@ -50,8 +51,8 @@ const AdminProductFormPage = ({ editId = '' }) => {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-400" aria-label="Загрузка товара" />
+      <div aria-hidden>
+        <FormSkeleton rows={6} />
       </div>
     )
   }
