@@ -30,7 +30,7 @@ const GET = async (request, context) => {
 
     const row = await db.product.findFirst({
       where: isNumeric ? { id: numericId, published: true } : { slug: id, published: true },
-      include: { category: true },
+      include: { category: true, subcategory: true },
     })
 
     if (!row) {

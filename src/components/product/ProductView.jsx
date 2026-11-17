@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ShoppingCart, Star, Truck, RotateCcw, Loader2, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, Star, Truck, RotateCcw, Loader2, ShieldCheck, ZoomIn } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useShop from '@/store/useShop'
@@ -11,12 +11,13 @@ import useHoverSlider from '@/hooks/useHoverSlider'
 import useT from '@/hooks/useT'
 import { styleGradient, formatPrice, AGE_LABEL } from '@/lib/constants'
 import ProductBadges from '@/components/product/ProductBadges'
+import LightboxGallery from '@/components/product/LightboxGallery'
 import PriceTag from '@/components/motion/PriceTag'
 import GlassButton from '@/components/motion/GlassButton'
 import ProductGrid from '@/components/product/ProductGrid'
 import Reveal from '@/components/motion/Reveal'
 
-// Детальная страница товара: скользящая галерея, размеры, количество, характеристики
+// Детальная страница товара: скользящая галерея с зум-лайтбоксом, размеры, количество, характеристики
 
 const ProductView = () => {
   const route = useShop((state) => state.route)
@@ -32,6 +33,8 @@ const ProductView = () => {
   const [error, setError] = useState('')
   const [size, setSize] = useState('')
   const [qty, setQty] = useState(1)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
   const { index, hovering, handlers, setIndex, hasMultiple, progress } = useHoverSlider(product?.images || [])
 
@@ -62,7 +65,13 @@ const ProductView = () => {
     }
   }, [route.slug])
 
+  const soldOut = !product || (product.stock ?? 0) <= 0
+
   const handleAdd = (openAfter) => {
+    if (soldOut) {
+      toast.warning(t('product.outOfStock'), { description: t('product.outOfStockNote') })
+      return
+    }
     if (product.sizes?.length && !size) {
       toast.warning(t('product.chooseSize'), { description: t('product.chooseSizeHint') })
       return
@@ -73,6 +82,11 @@ const ProductView = () => {
     } else {
       toast.success(t('toast.added'), { description: t('product.addedToastDesc', { name: product.name, qty }) })
     }
+  }
+
+  const openLightbox = (photoIndex) => {
+    setLightboxIndex(Number.isInteger(photoIndex) ? photoIndex : index)
+    setLightboxOpen(true)
   }
 
   if (loading) {
@@ -118,8 +132,18 @@ const ProductView = () => {
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
-            className="glow-frame relative aspect-square overflow-hidden rounded-[1.8rem]"
+            className="glow-frame relative aspect-square cursor-zoom-in overflow-hidden rounded-[1.8rem]"
             style={{ background: styleGradient(product.category?.style ?? 2) }}
+            onClick={() => openLightbox()}
+            role="button"
+            tabIndex={0}
+            aria-label={`${product.name} — ${t('product.zoomHint')}`}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openLightbox()
+              }
+            }}
           >
             <ProductBadges label={product.label} discountPercent={product.discountPercent} />
 
@@ -154,6 +178,11 @@ const ProductView = () => {
                 ))}
               </div>
             ) : null}
+
+            <span className="glass-btn glass-btn-ghost absolute bottom-4 right-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold text-purple-200">
+              <ZoomIn className="h-3.5 w-3.5 text-orange-300" aria-hidden />
+              {t('product.zoomHint')}
+            </span>
           </motion.div>
 
           {hasMultiple ? (
@@ -229,12 +258,13 @@ const ProductView = () => {
           ) : null}
 
           <div className="mt-7 flex flex-wrap items-center gap-3.5">
-            <div className="glass-btn glass-btn-ghost flex items-center rounded-full">
+            <div className={`glass-btn glass-btn-ghost flex items-center rounded-full ${soldOut ? 'pointer-events-none opacity-50' : ''}`}>
               <button
                 type="button"
                 onClick={() => setQty((value) => Math.max(1, value - 1))}
                 className="h-12 w-12 font-display text-xl text-purple-200 hover:text-white"
                 aria-label="Decrease quantity"
+                disabled={soldOut}
               >
                 −
               </button>
@@ -244,26 +274,46 @@ const ProductView = () => {
                 onClick={() => setQty((value) => Math.min(20, value + 1))}
                 className="h-12 w-12 font-display text-xl text-purple-200 hover:text-white"
                 aria-label="Increase quantity"
+                disabled={soldOut}
               >
                 +
               </button>
             </div>
 
-            <GlassButton tone="orange" className="h-12 px-7" onClick={() => handleAdd(false)}>
-              <ShoppingCart className="mr-2 h-4 w-4" aria-hidden /> {t('product.addToCart')}
+            <GlassButton
+              tone="orange"
+              className={`h-12 px-7 ${soldOut ? 'pointer-events-none opacity-50' : ''}`}
+              onClick={() => handleAdd(false)}
+              disabled={soldOut}
+            >
+              <ShoppingCart className="mr-2 h-4 w-4" aria-hidden /> {soldOut ? t('product.outOfStock') : t('product.addToCart')}
             </GlassButton>
-            <GlassButton tone="primary" className="h-12 px-7" onClick={() => handleAdd(true)}>
+            <GlassButton
+              tone="primary"
+              className={`h-12 px-7 ${soldOut ? 'pointer-events-none opacity-50' : ''}`}
+              onClick={() => handleAdd(true)}
+              disabled={soldOut}
+            >
               {t('product.buyNow')}
             </GlassButton>
           </div>
 
-          <p className="mt-4 text-sm font-bold text-orange-300/90">
-            {product.stock > 5
-              ? t('product.inStock')
-              : product.stock > 0
-                ? t('product.lowStock', { count: product.stock })
-                : t('product.soon')}
-          </p>
+          {soldOut ? (
+            <p className="mt-4 flex items-center gap-2 font-display text-sm font-bold text-red-400">
+              <span className="rounded-full border border-red-400/40 bg-red-500/10 px-3 py-1" role="status">
+                {t('product.outOfStock')}
+              </span>
+              <span className="text-muted-foreground">{t('product.outOfStockNote')}</span>
+            </p>
+          ) : (
+            <p className="mt-4 text-sm font-bold text-orange-300/90">
+              {product.stock > 5
+                ? t('product.inStock')
+                : product.stock > 0
+                  ? t('product.lowStock', { count: product.stock })
+                  : t('product.soon')}
+            </p>
+          )}
 
           <div className="glass-panel mt-7 p-6">
             <h2 className="font-display text-xl font-bold text-white">{t('product.description')}</h2>
@@ -303,6 +353,15 @@ const ProductView = () => {
           <ProductGrid products={related} />
         </section>
       ) : null}
+
+      <LightboxGallery
+        open={lightboxOpen}
+        images={images}
+        index={lightboxIndex}
+        onIndexChange={setLightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+        alt={product.name}
+      />
     </div>
   )
 }

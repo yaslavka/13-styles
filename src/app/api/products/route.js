@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import CACHE from '@/lib/cache'
 import DTO from '@/lib/dto'
-import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
+import { PAGE_SIZE } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +20,7 @@ const toNumberParam = (raw, fallback) => {
 }
 
 const parseLimit = (raw) => {
-  const num = toNumberParam(raw, DEFAULT_PAGE_SIZE)
+  const num = toNumberParam(raw, PAGE_SIZE)
   return Math.min(MAX_LIMIT, Math.max(1, Math.floor(num)))
 }
 
@@ -71,7 +71,7 @@ const GET = async (request) => {
     const offset = parseOffset(searchParams.get('offset'))
 
     // Кэшируем только выборку из БД (до поиска/сортировки/нарезки) — это самая дорогая часть
-    const cacheKey = `products:v1:${JSON.stringify({
+    const cacheKey = `products:v2:${JSON.stringify({
       category: categorySlug,
       gender,
       discount: discountOn ? 1 : 0,
@@ -88,7 +88,7 @@ const GET = async (request) => {
         categoryId = categoryRow.id
       }
 
-      const where = { published: true }
+      const where = { published: true, decor: false }
       if (categoryId > 0) where.categoryId = categoryId
       if (gender !== 'all') where.gender = gender
       if (featuredOn) where.featured = true

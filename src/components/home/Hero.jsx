@@ -57,10 +57,9 @@ const Hero = () => {
           initial={{ opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.12 }}
-          className="mt-7 font-display text-6xl font-extrabold leading-[0.98] sm:text-8xl lg:text-9xl"
+          className="mt-6 whitespace-nowrap font-display text-4xl font-extrabold leading-tight sm:text-6xl lg:text-7xl"
         >
-          <GradientText styleIndex={2}>{t('hero.title1')}</GradientText>
-          <br />
+          <GradientText styleIndex={2}>{t('hero.title1')}</GradientText>{' '}
           <GradientText styleIndex={4}>{t('hero.title2')}</GradientText>
         </motion.h1>
 

@@ -28,7 +28,6 @@ const Footer = () => {
       links: [
         { label: t('footer.styles'), action: () => navigate('styles') },
         { label: t('footer.hits'), action: () => navigate('catalog') },
-        { label: t('footer.admin'), action: () => navigate('admin') },
       ],
     },
     {

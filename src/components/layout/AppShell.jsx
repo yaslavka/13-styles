@@ -4,11 +4,13 @@ import { useEffect, Suspense } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import useShop from '@/store/useShop'
 import useCart from '@/store/useCart'
+import useAuth from '@/store/useAuth'
 import AnimatedBackground from '@/components/layout/AnimatedBackground'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import CartSheet from '@/components/cart/CartSheet'
 import ChatWidget from '@/components/chat/ChatWidget'
+import UserAuthDialog from '@/components/auth/UserAuthDialog'
 import HomeView from '@/components/home/HomeView'
 import CatalogView from '@/components/catalog/CatalogView'
 import ProductView from '@/components/product/ProductView'
@@ -29,6 +31,8 @@ const AppShell = ({ initialProducts = [], initialCategories = [] }) => {
     // сохранённые фильтры/язык/корзина подхватываются сразу после монтирования
     useShop.persist.rehydrate()
     useCart.persist.rehydrate()
+    useAuth.persist.rehydrate()
+    useAuth.getState().init()
     syncRoute()
     initLocale()
     const onHashChange = () => syncRoute()
@@ -82,6 +86,7 @@ const AppShell = ({ initialProducts = [], initialCategories = [] }) => {
       <Footer />
       <CartSheet />
       <ChatWidget />
+      <UserAuthDialog />
     </div>
   )
 }

@@ -3,56 +3,36 @@ import { db } from '@/lib/db'
 import ADMIN from '@/lib/admin'
 import CACHE from '@/lib/cache'
 import DTO from '@/lib/dto'
+import PAGINATION from '@/lib/pagination'
+import PAYLOAD from '@/lib/catalogPayload'
 import { slugify } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-const GENDER_VALUES = ['men', 'women', 'unisex']
-const LABEL_VALUES = ['none', 'new', 'hit', 'sale']
-const MAX_NAME_LENGTH = 120
 const MAX_SLUG_ATTEMPTS = 5
-const MAX_FETCH_ROWS = 500
 
-// Массив строк из тела запроса: не-массив -> [], мусор отфильтровываем, лимит опционален
-const cleanStringArray = (value, maxItems) => {
-  if (!Array.isArray(value)) return []
-  const cleaned = value
-    .filter((entry) => typeof entry === 'string' && entry.trim().length > 0)
-    .map((entry) => entry.trim())
-  return Number.isInteger(maxItems) && maxItems > 0 ? cleaned.slice(0, maxItems) : cleaned
-}
-
-const normalizeStock = (value, fallback = 10) => {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return fallback
-  return Math.max(0, Math.floor(num))
-}
-
-const normalizeRating = (value, fallback = 4.8) => {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return fallback
-  return Math.min(5, Math.max(0, num))
-}
-
-const normalizeReviews = (value, fallback = 0) => {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return fallback
-  return Math.max(0, Math.floor(num))
-}
-
-// GET /api/admin/products — полный список товаров (включая неопубликованные)
+// GET /api/admin/products — постраничный список товаров (включая неопубликованные и декор)
 const GET = async (request) => {
   if (!ADMIN.requireAdmin(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const rows = await db.product.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: { category: true },
-      take: MAX_FETCH_ROWS,
-    })
-    return NextResponse.json({ items: rows.map((row) => DTO.toProductDTO(row)) })
+    const { searchParams } = new URL(request.url)
+    const { limit, offset } = PAGINATION.parsePagination(searchParams)
+
+    const [rows, total] = await Promise.all([
+      db.product.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: { category: true, subcategory: true },
+        take: limit,
+        skip: offset,
+      }),
+      db.product.count(),
+    ])
+
+    const items = rows.map((row) => DTO.toProductDTO(row))
+    return NextResponse.json({ items, ...PAGINATION.pageMeta(items, total, offset) })
   } catch (error) {
     console.error('[api/admin/products] ошибка загрузки товаров:', error?.message || error)
     return NextResponse.json({ error: 'Не удалось загрузить список товаров' }, { status: 500 })
@@ -72,22 +52,23 @@ const POST = async (request) => {
     }
 
     const name = typeof body.name === 'string' ? body.name.trim() : ''
-    if (name.length < 2 || name.length > MAX_NAME_LENGTH) {
+    if (!PAYLOAD.isValidName(name)) {
       return NextResponse.json({ error: 'Название товара должно содержать от 2 до 120 символов' }, { status: 400 })
     }
 
     const price = Number(body.price)
-    if (!Number.isFinite(price) || price <= 0) {
+    if (!PAYLOAD.isValidPrice(price)) {
       return NextResponse.json({ error: 'Цена должна быть числом больше нуля' }, { status: 400 })
     }
 
-    const categoryId = Number(body.categoryId)
-    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+    const categoryId = await PAYLOAD.resolveCategoryId(db, body.categoryId)
+    if (!categoryId) {
       return NextResponse.json({ error: 'Не указана категория товара' }, { status: 400 })
     }
-    const categoryRow = await db.category.findUnique({ where: { id: categoryId } })
-    if (!categoryRow) {
-      return NextResponse.json({ error: 'Указанная категория не найдена' }, { status: 400 })
+
+    const subcategory = await PAYLOAD.resolveSubcategoryId(db, body.subcategoryId, categoryId)
+    if (subcategory.error) {
+      return NextResponse.json({ error: subcategory.error }, { status: 400 })
     }
 
     // Slug: явный -> транслитерация, иначе из названия; конфликт решаем коротким случайным суффиксом
@@ -104,47 +85,38 @@ const POST = async (request) => {
       return NextResponse.json({ error: 'Не удалось подобрать уникальный slug для товара' }, { status: 400 })
     }
 
-    const oldPriceRaw = Number(body.oldPrice)
-    const oldPrice = Number.isFinite(oldPriceRaw) && oldPriceRaw > price ? oldPriceRaw : null
-
-    const gender = GENDER_VALUES.includes(body.gender) ? body.gender : 'unisex'
-    const label = LABEL_VALUES.includes(body.label) ? body.label : 'none'
-    const sizes = cleanStringArray(body.sizes, 12)
-    const colors = cleanStringArray(body.colors)
-    const images = cleanStringArray(body.images, 8)
-    const stock = normalizeStock(body.stock)
-    const rating = normalizeRating(body.rating)
-    const reviews = normalizeReviews(body.reviews)
-    const featured = body.featured === true
-    const published = body.published === undefined ? true : body.published === true
-    const shortDesc = typeof body.shortDesc === 'string' ? body.shortDesc.trim() : ''
-    const description = typeof body.description === 'string' ? body.description.trim() : ''
+    const oldPrice = PAYLOAD.resolveOldPrice(body.oldPrice, price)
+    const gender = PAYLOAD.GENDER_VALUES.includes(body.gender) ? body.gender : 'unisex'
+    const label = PAYLOAD.LABEL_VALUES.includes(body.label) ? body.label : 'none'
 
     const created = await db.product.create({
       data: {
         slug,
         name,
-        shortDesc,
-        description,
+        shortDesc: typeof body.shortDesc === 'string' ? body.shortDesc.trim() : '',
+        description: typeof body.description === 'string' ? body.description.trim() : '',
         price,
         oldPrice,
         gender,
         label,
-        sizes: JSON.stringify(sizes),
-        colors: JSON.stringify(colors),
-        images: JSON.stringify(images),
-        stock,
-        rating,
-        reviews,
-        featured,
-        published,
+        sizes: JSON.stringify(PAYLOAD.cleanStringArray(body.sizes, 12)),
+        colors: JSON.stringify(PAYLOAD.cleanStringArray(body.colors)),
+        images: JSON.stringify(PAYLOAD.cleanStringArray(body.images, 8)),
+        stock: PAYLOAD.normalizeStock(body.stock),
+        rating: PAYLOAD.normalizeRating(body.rating),
+        reviews: PAYLOAD.normalizeReviews(body.reviews),
+        featured: body.featured === true,
+        published: body.published === undefined ? true : body.published === true,
+        decor: body.decor === true,
+        subcategoryId: subcategory.id,
         categoryId,
       },
-      include: { category: true },
+      include: { category: true, subcategory: true },
     })
 
     await CACHE.invalidatePrefix('products')
     await CACHE.invalidatePrefix('categories')
+    await CACHE.invalidatePrefix('ssr')
 
     return NextResponse.json({ product: DTO.toProductDTO(created) }, { status: 201 })
   } catch (error) {

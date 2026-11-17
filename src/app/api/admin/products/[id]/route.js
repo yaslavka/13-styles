@@ -3,39 +3,10 @@ import { db } from '@/lib/db'
 import ADMIN from '@/lib/admin'
 import CACHE from '@/lib/cache'
 import DTO from '@/lib/dto'
+import PAYLOAD from '@/lib/catalogPayload'
 import { slugify } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
-
-const GENDER_VALUES = ['men', 'women', 'unisex']
-const LABEL_VALUES = ['none', 'new', 'hit', 'sale']
-const MAX_NAME_LENGTH = 120
-
-const cleanStringArray = (value, maxItems) => {
-  if (!Array.isArray(value)) return []
-  const cleaned = value
-    .filter((entry) => typeof entry === 'string' && entry.trim().length > 0)
-    .map((entry) => entry.trim())
-  return Number.isInteger(maxItems) && maxItems > 0 ? cleaned.slice(0, maxItems) : cleaned
-}
-
-const normalizeStock = (value, fallback = 10) => {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return fallback
-  return Math.max(0, Math.floor(num))
-}
-
-const normalizeRating = (value, fallback = 4.8) => {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return fallback
-  return Math.min(5, Math.max(0, num))
-}
-
-const normalizeReviews = (value, fallback = 0) => {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return fallback
-  return Math.max(0, Math.floor(num))
-}
 
 const parseId = (raw) => {
   const num = parseInt(raw, 10)
@@ -45,6 +16,35 @@ const parseId = (raw) => {
 const invalidateCatalogCache = async () => {
   await CACHE.invalidatePrefix('products')
   await CACHE.invalidatePrefix('categories')
+  await CACHE.invalidatePrefix('ssr')
+}
+
+// GET /api/admin/products/[id] — один товар для формы редактирования
+const GET = async (request, context) => {
+  if (!ADMIN.requireAdmin(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const params = await context.params
+    const id = parseId(params?.id)
+    if (id === null) {
+      return NextResponse.json({ error: 'Некорректный идентификатор товара' }, { status: 400 })
+    }
+
+    const row = await db.product.findUnique({
+      where: { id },
+      include: { category: true, subcategory: true },
+    })
+    if (!row) {
+      return NextResponse.json({ error: 'Товар не найден' }, { status: 404 })
+    }
+
+    return NextResponse.json({ product: DTO.toProductDTO(row) })
+  } catch (error) {
+    console.error('[api/admin/products/[id]] ошибка загрузки товара:', error?.message || error)
+    return NextResponse.json({ error: 'Не удалось загрузить товар' }, { status: 500 })
+  }
 }
 
 // PUT /api/admin/products/[id] — частичное обновление товара
@@ -75,7 +75,7 @@ const PUT = async (request, context) => {
     // Название: применяем ту же валидацию, что и при создании
     if (body.name !== undefined) {
       const name = typeof body.name === 'string' ? body.name.trim() : ''
-      if (name.length < 2 || name.length > MAX_NAME_LENGTH) {
+      if (!PAYLOAD.isValidName(name)) {
         return NextResponse.json({ error: 'Название товара должно содержать от 2 до 120 символов' }, { status: 400 })
       }
       data.name = name
@@ -97,38 +97,44 @@ const PUT = async (request, context) => {
     let finalPrice = existing.price
     if (body.price !== undefined) {
       const price = Number(body.price)
-      if (!Number.isFinite(price) || price <= 0) {
+      if (!PAYLOAD.isValidPrice(price)) {
         return NextResponse.json({ error: 'Цена должна быть числом больше нуля' }, { status: 400 })
       }
       finalPrice = price
       data.price = price
     }
     if (body.oldPrice !== undefined) {
-      const oldPrice = Number(body.oldPrice)
-      data.oldPrice = Number.isFinite(oldPrice) && oldPrice > finalPrice ? oldPrice : null
+      data.oldPrice = PAYLOAD.resolveOldPrice(body.oldPrice, finalPrice)
     } else if (body.price !== undefined && existing.oldPrice !== null && existing.oldPrice <= finalPrice) {
       // Новая цена перекрыла старую — скидка теряет смысл
       data.oldPrice = null
     }
 
     // Категория: должна существовать
+    let categoryId = existing.categoryId
     if (body.categoryId !== undefined) {
-      const categoryId = Number(body.categoryId)
-      if (!Number.isInteger(categoryId) || categoryId <= 0) {
-        return NextResponse.json({ error: 'Некорректный идентификатор категории' }, { status: 400 })
-      }
-      const categoryRow = await db.category.findUnique({ where: { id: categoryId } })
-      if (!categoryRow) {
+      const nextCategoryId = await PAYLOAD.resolveCategoryId(db, body.categoryId)
+      if (!nextCategoryId) {
         return NextResponse.json({ error: 'Указанная категория не найдена' }, { status: 400 })
       }
+      categoryId = nextCategoryId
       data.categoryId = categoryId
     }
 
+    // Подкатегория: должна существовать и относиться к категории товара
+    if (body.subcategoryId !== undefined) {
+      const subcategory = await PAYLOAD.resolveSubcategoryId(db, body.subcategoryId, categoryId)
+      if (subcategory.error) {
+        return NextResponse.json({ error: subcategory.error }, { status: 400 })
+      }
+      data.subcategoryId = subcategory.id
+    }
+
     if (body.gender !== undefined) {
-      data.gender = GENDER_VALUES.includes(body.gender) ? body.gender : 'unisex'
+      data.gender = PAYLOAD.GENDER_VALUES.includes(body.gender) ? body.gender : 'unisex'
     }
     if (body.label !== undefined) {
-      data.label = LABEL_VALUES.includes(body.label) ? body.label : 'none'
+      data.label = PAYLOAD.LABEL_VALUES.includes(body.label) ? body.label : 'none'
     }
 
     if (body.shortDesc !== undefined) {
@@ -138,20 +144,21 @@ const PUT = async (request, context) => {
       data.description = typeof body.description === 'string' ? body.description.trim() : ''
     }
 
-    if (body.sizes !== undefined) data.sizes = JSON.stringify(cleanStringArray(body.sizes, 12))
-    if (body.colors !== undefined) data.colors = JSON.stringify(cleanStringArray(body.colors))
-    if (body.images !== undefined) data.images = JSON.stringify(cleanStringArray(body.images, 8))
+    if (body.sizes !== undefined) data.sizes = JSON.stringify(PAYLOAD.cleanStringArray(body.sizes, 12))
+    if (body.colors !== undefined) data.colors = JSON.stringify(PAYLOAD.cleanStringArray(body.colors))
+    if (body.images !== undefined) data.images = JSON.stringify(PAYLOAD.cleanStringArray(body.images, 8))
 
-    if (body.stock !== undefined) data.stock = normalizeStock(body.stock)
-    if (body.rating !== undefined) data.rating = normalizeRating(body.rating)
-    if (body.reviews !== undefined) data.reviews = normalizeReviews(body.reviews)
+    if (body.stock !== undefined) data.stock = PAYLOAD.normalizeStock(body.stock)
+    if (body.rating !== undefined) data.rating = PAYLOAD.normalizeRating(body.rating)
+    if (body.reviews !== undefined) data.reviews = PAYLOAD.normalizeReviews(body.reviews)
     if (body.featured !== undefined) data.featured = body.featured === true
     if (body.published !== undefined) data.published = body.published === true
+    if (body.decor !== undefined) data.decor = body.decor === true
 
     const updated = await db.product.update({
       where: { id },
       data,
-      include: { category: true },
+      include: { category: true, subcategory: true },
     })
 
     await invalidateCatalogCache()
@@ -191,4 +198,4 @@ const DELETE = async (request, context) => {
   }
 }
 
-export { PUT, DELETE }
+export { GET, PUT, DELETE }

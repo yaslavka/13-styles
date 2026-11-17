@@ -1,13 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import useShop from '@/store/useShop'
 import useDebounce from '@/hooks/useDebounce'
+import useInfiniteList from '@/hooks/useInfiniteList'
 import useT from '@/hooks/useT'
 import API from '@/lib/api'
-import { SORT_OPTIONS, GENDERS, CLOTHING_SIZES, SHOE_SIZES, PRICE_LIMITS } from '@/lib/constants'
+import { SORT_OPTIONS, GENDERS, CLOTHING_SIZES, SHOE_SIZES, PRICE_LIMITS, PAGE_SIZE } from '@/lib/constants'
 import ProductGrid from '@/components/product/ProductGrid'
 import GlassButton from '@/components/motion/GlassButton'
 import Reveal from '@/components/motion/Reveal'
@@ -15,102 +16,56 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-// Каталог: сохраняемые фильтры, сортировка, бесконечная подгрузка карточек по скроллу
+// Каталог: сохраняемые фильтры, сортировка, бесконечная подгрузка карточек по скроллу (по 25)
 
 const ALL_SIZES = [...CLOTHING_SIZES, ...SHOE_SIZES]
-
-const buildQuery = (filters, offset, limit) => {
-  const params = new URLSearchParams()
-  if (filters.category && filters.category !== 'all') params.set('category', filters.category)
-  if (filters.gender && filters.gender !== 'all') params.set('gender', filters.gender)
-  if (filters.search) params.set('search', filters.search)
-  if (filters.sort && filters.sort !== 'new') params.set('sort', filters.sort)
-  if (filters.min > PRICE_LIMITS.min) params.set('min', String(filters.min))
-  if (filters.max < PRICE_LIMITS.max) params.set('max', String(filters.max))
-  if (filters.sizes?.length) params.set('sizes', filters.sizes.join(','))
-  if (filters.discount) params.set('discount', '1')
-  params.set('offset', String(offset))
-  params.set('limit', String(limit))
-  return `/api/products?${params.toString()}`
-}
 
 const CatalogView = ({ categories = [] }) => {
   const route = useShop((state) => state.route)
   const filters = useShop((state) => state.filters)
   const setFilter = useShop((state) => state.setFilter)
   const resetFilters = useShop((state) => state.resetFilters)
-  const locale = useShop((state) => state.locale)
   const t = useT()
 
-  const [items, setItems] = useState([])
-  const [total, setTotal] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [searchInput, setSearchInput] = useState('')
+  const [searchInput, setSearchInput] = useState(route.query.search || '')
   const debouncedSearch = useDebounce(searchInput, 400)
-  const [localError, setLocalError] = useState('')
-  const sentinelRef = useRef(null)
 
-  // Синхронизация с query-параметрами хэш-маршрута (навигация из шапки/подвала)
-  useEffect(() => {
-    const patch = {}
-    if (route.query.category) patch.category = route.query.category
-    if (route.query.search !== undefined) patch.search = route.query.search
-    if (route.query.discount) patch.discount = true
-    if (Object.keys(patch).length) setFilter(patch)
-    setSearchInput(route.query.search || '')
-  }, [route.query.category, route.query.search, route.query.discount, setFilter])
+  // Подхват поисковой фразы при внешней навигации (шапка/подвал) без лишних эффектов:
+  // сравниваем последний известный query и при изменении обновляем локальный ввод в рендере
+  const navSearch = route.query.search || ''
+  const [lastNavSearch, setLastNavSearch] = useState(navSearch)
+  if (lastNavSearch !== navSearch) {
+    setLastNavSearch(navSearch)
+    setSearchInput(navSearch)
+  }
 
   useEffect(() => {
     if (debouncedSearch !== filters.search) setFilter({ search: debouncedSearch })
   }, [debouncedSearch])
 
-  const fetchPage = useCallback(
-    async (offset, replace) => {
-      if (replace) setLoading(true)
-      else setLoadingMore(true)
-      try {
-        const data = await API.get(buildQuery(filters, offset, 12))
-        setItems((prev) => {
-          if (replace) return data.items
-          const known = new Set(prev.map((item) => item.id))
-          return [...prev, ...data.items.filter((item) => !known.has(item.id))]
-        })
-        setTotal(data.total)
-        setHasMore(data.hasMore)
-        setLocalError('')
-      } catch (error) {
-        setLocalError(error.message)
-        toast.error(t('toast.loadError'), { description: error.message })
-      } finally {
-        setLoading(false)
-        setLoadingMore(false)
-      }
+  const buildUrl = useCallback(
+    (offset, pageSize) => {
+      const params = new URLSearchParams()
+      if (filters.category && filters.category !== 'all') params.set('category', filters.category)
+      if (filters.gender && filters.gender !== 'all') params.set('gender', filters.gender)
+      if (filters.search) params.set('search', filters.search)
+      if (filters.sort && filters.sort !== 'new') params.set('sort', filters.sort)
+      if (filters.min > PRICE_LIMITS.min) params.set('min', String(filters.min))
+      if (filters.max < PRICE_LIMITS.max) params.set('max', String(filters.max))
+      if (filters.sizes?.length) params.set('sizes', filters.sizes.join(','))
+      if (filters.discount) params.set('discount', '1')
+      params.set('offset', String(offset))
+      params.set('limit', String(pageSize))
+      return `/api/products?${params.toString()}`
     },
-    [filters, t]
+    [filters]
   )
 
-  // Первая страница при смене фильтров
-  useEffect(() => {
-    fetchPage(0, true)
-  }, [fetchPage])
-
-  // Бесконечная прокрутка: дозагрузка, когда sentinel появляется у нижнего края
-  useEffect(() => {
-    const node = sentinelRef.current
-    if (!node) return undefined
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
-          fetchPage(items.length, false)
-        }
-      },
-      { rootMargin: '420px 0px' }
-    )
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [hasMore, loading, loadingMore, items.length, fetchPage])
+  const { items, total, loading, loadingMore, sentinelRef } = useInfiniteList({
+    buildUrl,
+    fetcher: API.get,
+    onError: (error) => toast.error(t('toast.loadError'), { description: error.message }),
+  })
 
   const toggleSize = (size) => {
     const next = filters.sizes.includes(size) ? filters.sizes.filter((s) => s !== size) : [...filters.sizes, size]
@@ -275,8 +230,6 @@ const CatalogView = ({ categories = [] }) => {
             <div key={index} className="glass-card aspect-[3/4] animate-pulse" />
           ))}
         </div>
-      ) : localError && !items.length ? (
-        <div className="glass-panel p-8 text-center font-display text-lg font-bold text-orange-200">{localError}</div>
       ) : (
         <>
           <ProductGrid products={items} />

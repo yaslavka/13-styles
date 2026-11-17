@@ -2,18 +2,19 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ShoppingCart, MessageSquareText, Shield, Search, Menu, X, Store, Globe, Check } from 'lucide-react'
+import { ShoppingCart, MessageSquareText, Search, Menu, X, Store, Globe, Check, UserRound, LogOut } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import useShop from '@/store/useShop'
 import useCart from '@/store/useCart'
+import useAuth from '@/store/useAuth'
 import useT from '@/hooks/useT'
 import { LOCALES } from '@/lib/i18n'
 import GradientText from '@/components/motion/GradientText'
 
-// Шапка 13 STYLES: стеклянный логотип, навигация, поиск, переключатель языка, корзина, чат
+// Шапка 13 STYLES: стеклянный логотип (ведёт на главную), навигация, поиск, язык, аккаунт, корзина
 
 const Header = () => {
   const [search, setSearch] = useState('')
@@ -23,12 +24,15 @@ const Header = () => {
   const setChatOpen = useShop((state) => state.setChatOpen)
   const locale = useShop((state) => state.locale)
   const setLocale = useShop((state) => state.setLocale)
+  const user = useAuth((state) => state.user)
+  const setAuthOpen = useAuth((state) => state.setAuthOpen)
+  const logout = useAuth((state) => state.logout)
   const cartCount = useCart((state) => state.items.reduce((sum, item) => sum + item.qty, 0))
   const cartOpen = useCart((state) => state.open)
   const t = useT()
 
+  // Кнопка «Главная» в навигации не нужна: логотип уже ведёт на главную
   const navLinks = [
-    { key: 'nav.home', view: 'home' },
     { key: 'nav.catalog', view: 'catalog' },
     { key: 'nav.men', view: 'catalog', query: { category: 'men' } },
     { key: 'nav.women', view: 'catalog', query: { category: 'women' } },
@@ -49,6 +53,11 @@ const Header = () => {
     setFilter({ search })
     navigate('catalog', { query: search ? { search } : {} })
     setMobileOpen(false)
+  }
+
+  const openAuth = () => {
+    setMobileOpen(false)
+    setAuthOpen(true)
   }
 
   return (
@@ -113,7 +122,7 @@ const Header = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="scrollbar-glass max-h-80 w-48 overflow-y-auto rounded-2xl border-white/15 bg-[#161233]/95 p-1.5 backdrop-blur-xl"
+              className="max-h-80 w-48 overflow-y-auto rounded-2xl border-white/15 bg-[#161233]/95 p-1.5 backdrop-blur-xl"
             >
               {LOCALES.map((item) => (
                 <button
@@ -130,6 +139,42 @@ const Header = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="glass-btn glass-btn-primary flex h-10 items-center gap-1.5 rounded-full px-3 font-display text-sm text-white"
+                  aria-label={t('auth.account')}
+                >
+                  <UserRound className="h-4 w-4" aria-hidden />
+                  <span className="hidden max-w-24 truncate md:inline">{user.name}</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-2xl border-white/15 bg-[#161233]/95 p-1.5 backdrop-blur-xl">
+                <DropdownMenuItem asChild>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-purple-100/80 transition-colors hover:bg-white/10"
+                  >
+                    <LogOut className="h-4 w-4 text-orange-300" aria-hidden /> {t('auth.logout')}
+                  </button>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={openAuth}
+              aria-label={t('auth.title')}
+              className="text-purple-200 hover:bg-white/10 hover:text-white"
+            >
+              <UserRound className="h-5 w-5" aria-hidden />
+            </Button>
+          )}
 
           <Button
             variant="ghost"
@@ -155,16 +200,6 @@ const Header = () => {
               </span>
             ) : null}
           </motion.button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('admin')}
-            aria-label={t('header.admin')}
-            className="hidden text-purple-200 hover:bg-white/10 hover:text-white sm:grid"
-          >
-            <Shield className="h-5 w-5" aria-hidden />
-          </Button>
 
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
@@ -198,13 +233,10 @@ const Header = () => {
                 ))}
                 <button
                   type="button"
-                  onClick={() => {
-                    setMobileOpen(false)
-                    navigate('admin')
-                  }}
+                  onClick={openAuth}
                   className="glass-btn glass-btn-ghost mt-4 flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left font-display text-base text-orange-200"
                 >
-                  <Shield className="h-4 w-4" aria-hidden /> {t('header.admin')}
+                  <UserRound className="h-4 w-4" aria-hidden /> {user ? user.name : t('auth.title')}
                 </button>
               </nav>
             </SheetContent>

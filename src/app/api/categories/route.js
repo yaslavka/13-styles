@@ -5,18 +5,19 @@ import DTO from '@/lib/dto'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/categories — список категорий с числом опубликованных товаров
+// GET /api/categories — список категорий с числом опубликованных товаров и подкатегориями
 const GET = async () => {
   try {
-    const categories = await CACHE.wrap('categories:v1', 60000, async () => {
+    const categories = await CACHE.wrap('categories:v2', 60000, async () => {
       const rows = await db.category.findMany({
         orderBy: { sort: 'asc' },
         include: {
           _count: {
             select: {
-              products: { where: { published: true } },
+              products: { where: { published: true, decor: false } },
             },
           },
+          subcategories: { orderBy: { sort: 'asc' } },
         },
       })
       return rows.map((row) => DTO.toCategoryDTO(row, row._count ? row._count.products : 0))

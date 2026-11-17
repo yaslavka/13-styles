@@ -93,7 +93,8 @@ export const ORDER_STATUSES = [
 
 export const PRICE_LIMITS = { min: 0, max: 500 }
 
-export const DEFAULT_PAGE_SIZE = 12
+// Размер страницы списков (витрина и админка): подгрузка по скроллу по 25 записей
+export const PAGE_SIZE = 25
 
 // Форматирование цены в евро с учётом текущей локали витрины
 export const formatPrice = (value, locale = 'en') => {
@@ -153,7 +154,7 @@ const CONSTANTS = {
   SORT_OPTIONS,
   ORDER_STATUSES,
   PRICE_LIMITS,
-  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE,
   formatPrice,
   discountPercent,
   slugify,

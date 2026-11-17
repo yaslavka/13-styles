@@ -2,7 +2,7 @@
 // Запуск: bun scripts/seed.js (сначала генерирует картинки: bun run images:gen)
 
 import { db } from '../src/lib/db.js'
-import { CATEGORIES_SEED, CLOTHING_SIZES, SHOE_SIZES } from '../src/lib/constants.js'
+import { CATEGORIES_SEED, CLOTHING_SIZES, SHOE_SIZES, slugify } from '../src/lib/constants.js'
 
 const img = (slug) => [1, 2, 3].map((n) => `/products/${slug}-${n}.png`)
 
@@ -297,6 +297,17 @@ const PRODUCTS = [
   },
 ]
 
+// Товары, которые живут только в анимации Hero главной страницы — декор, не витрина
+const DECOR_SLUGS = new Set(['hoodie-neo-violet', 'sneakers-run-orange', 'dress-neon-violet', 'backpack-data-violet'])
+
+// Стартовые подкатегории: [категория, [названия]]
+const SUBCATEGORIES_SEED = [
+  ['men', ['Hoodies & Sweats', 'T-shirts', 'Jeans', 'Bombers & Jackets']],
+  ['women', ['Dresses', 'Hoodies & Crop', 'Tops & Shirts', 'Jackets']],
+  ['shoes', ['Sneakers', 'High-tops', 'Boots']],
+  ['accessories', ['Caps', 'Backpacks', 'Sunglasses', 'Watches']],
+]
+
 const main = async () => {
   console.log('[seed] пополнение каталога 13 STYLES')
 
@@ -309,6 +320,21 @@ const main = async () => {
     })
     categoryIdBySlug.set(category.slug, row.id)
     console.log(`[seed] категория: ${row.name}`)
+  }
+
+  // Стартовые подкатегории для фильтров и админки
+  for (const [categorySlug, names] of SUBCATEGORIES_SEED) {
+    const categoryId = categoryIdBySlug.get(categorySlug)
+    for (let index = 0; index < names.length; index += 1) {
+      const name = names[index]
+      const slug = `${categorySlug}-${slugify(name)}`
+      await db.subcategory.upsert({
+        where: { slug },
+        create: { slug, name, sort: index + 1, categoryId },
+        update: { name, sort: index + 1, categoryId },
+      })
+    }
+    console.log(`[seed] подкатегории: ${categorySlug}`)
   }
 
   // Полная замена товаров (старые пиксельные позиции больше не актуальны)
@@ -334,6 +360,7 @@ const main = async () => {
       reviews: product.reviews,
       featured: product.featured,
       published: true,
+      decor: DECOR_SLUGS.has(product.slug),
       categoryId,
     }
     await db.product.create({ data })

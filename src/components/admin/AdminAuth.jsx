@@ -9,9 +9,10 @@ import GradientText from '@/components/motion/GradientText'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-// Вход в админ-панель по паролю (ADMIN_PASSWORD, по умолчанию 13styles2024)
+// Вход в админ-панель по логину и паролю (ADMIN_LOGIN/ADMIN_PASSWORD, по умолчанию admin / 13styles2024)
 
 const AdminGate = ({ onAuthed }) => {
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -19,7 +20,7 @@ const AdminGate = ({ onAuthed }) => {
     event.preventDefault()
     setBusy(true)
     try {
-      await API.admin.login(password)
+      await API.admin.login(login.trim(), password)
       toast.success('Доступ открыт', { description: 'Добро пожаловать в админку 13 STYLES' })
       onAuthed()
     } catch (error) {
@@ -38,10 +39,22 @@ const AdminGate = ({ onAuthed }) => {
         <GradientText styleIndex={4}>АДМИН-ПАНЕЛЬ</GradientText>
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Управление товарами, заказами и чатом поддержки 13 STYLES.
+        Управление товарами, категориями, заказами и чатом поддержки 13 STYLES.
       </p>
 
       <form onSubmit={submit} className="rounded-2xl mt-7 w-full space-y-4 border border-purple-500/25 bg-card/70 p-5 backdrop-blur-sm">
+        <div className="space-y-1.5 text-left">
+          <Label htmlFor="admin-login" className="text-xs text-purple-200">Логин администратора</Label>
+          <Input
+            id="admin-login"
+            required
+            value={login}
+            onChange={(event) => setLogin(event.target.value)}
+            placeholder="admin"
+            className="border-purple-500/30 bg-[#0d0c1c]"
+            autoComplete="username"
+          />
+        </div>
         <div className="space-y-1.5 text-left">
           <Label htmlFor="admin-password" className="text-xs text-purple-200">Пароль администратора</Label>
           <Input
@@ -50,7 +63,7 @@ const AdminGate = ({ onAuthed }) => {
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="13styles2024"
+            placeholder="••••••••"
             className="border-purple-500/30 bg-[#0d0c1c]"
             autoComplete="current-password"
           />

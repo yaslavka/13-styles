@@ -20,6 +20,18 @@ const toCategoryDTO = (row, count = 0) => ({
   style: row.style,
   sort: row.sort,
   count,
+  subcategories: Array.isArray(row.subcategories)
+    ? row.subcategories.map((item) => toSubcategoryDTO(item))
+    : [],
+})
+
+const toSubcategoryDTO = (row, count = null) => ({
+  id: row.id,
+  slug: row.slug,
+  name: row.name,
+  sort: row.sort,
+  categoryId: row.categoryId,
+  ...(count !== null ? { count } : {}),
 })
 
 const toProductDTO = (row) => ({
@@ -41,6 +53,11 @@ const toProductDTO = (row) => ({
   reviews: row.reviews,
   featured: row.featured,
   published: row.published,
+  decor: row.decor,
+  subcategoryId: row.subcategoryId ?? null,
+  subcategory: row.subcategory
+    ? { id: row.subcategory.id, slug: row.subcategory.slug, name: row.subcategory.name }
+    : null,
   category: row.category
     ? { id: row.category.id, slug: row.category.slug, name: row.category.name, icon: row.category.icon, style: row.category.style }
     : null,
@@ -60,6 +77,13 @@ const toOrderDTO = (row) => ({
   createdAt: row.createdAt ? row.createdAt.toISOString() : null,
 })
 
-const DTO = { toProductDTO, toCategoryDTO, toOrderDTO }
+const toUserDTO = (row) => ({
+  id: row.id,
+  login: row.login,
+  name: row.name,
+  createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+})
+
+const DTO = { toProductDTO, toCategoryDTO, toSubcategoryDTO, toOrderDTO, toUserDTO }
 
 export default DTO

@@ -10,23 +10,29 @@ import { LOCALE_CODES, detectLocale } from '@/lib/i18n'
 
 const KNOWN_VIEWS = ['catalog', 'product', 'checkout', 'admin', 'styles']
 
+const parseQuery = (raw) => {
+  const query = {}
+  if (!raw) return query
+  raw.split('&').forEach((pair) => {
+    const [key, value] = pair.split('=')
+    if (key) query[decodeURIComponent(key)] = decodeURIComponent(value || '')
+  })
+  return query
+}
+
+// Маршрут берётся из хэша, а если хэша нет — из пути (/admin открывается прямым набором)
 const parseHash = () => {
   if (typeof window === 'undefined') return { view: 'home', slug: '', query: {} }
   const raw = window.location.hash.replace(/^#\/?/, '')
-  const [pathPart, queryPart] = raw.split('?')
-  const segments = pathPart.split('/').filter(Boolean)
-  const query = {}
-  if (queryPart) {
-    queryPart.split('&').forEach((pair) => {
-      const [key, value] = pair.split('=')
-      if (key) query[decodeURIComponent(key)] = decodeURIComponent(value || '')
-    })
-  }
+  const [hashPath, hashQuery] = raw.split('?')
+  const path = hashPath || window.location.pathname.replace(/^\/+/, '')
+  const querySource = hashPath ? hashQuery : window.location.search.replace(/^\?/, '')
+  const segments = path.split('/').filter(Boolean)
   const view = segments[0] || 'home'
   return {
     view: KNOWN_VIEWS.includes(view) ? view : 'home',
     slug: segments[1] ? decodeURIComponent(segments[1]) : '',
-    query,
+    query: parseQuery(querySource),
   }
 }
 
@@ -60,7 +66,20 @@ const useShop = create(
       accentStyle: 2,
       locale: DEFAULT_LOCALE,
 
-      syncRoute: () => set({ route: parseHash() }),
+      syncRoute: () => set((state) => {
+        const route = parseHash()
+        // Параметры каталога из маршрута попадают в сохраняемые фильтры (навигация из шапки/подвала)
+        const patch = {}
+        if (route.view === 'catalog') {
+          if (route.query.category) patch.category = route.query.category
+          if (route.query.search !== undefined) patch.search = route.query.search
+          if (route.query.discount) patch.discount = true
+        }
+        return {
+          route,
+          filters: Object.keys(patch).length ? { ...state.filters, ...patch } : state.filters,
+        }
+      }),
 
       navigate: (view, options = {}) => {
         const hash = buildHash(view, options)

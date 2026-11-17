@@ -12,15 +12,20 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-// Форма создания/редактирования товара: загрузка фото, размеры, лейблы, цены
+// Форма создания/редактирования товара: загрузка фото, размеры, лейблы, цены,
+// подкатегория и флаг декора (товар живёт только в анимации главной)
 
 const ALL_SIZES = [...CLOTHING_SIZES, ...SHOE_SIZES]
 const COLORWAY_PRESETS = ['violet', 'orange', 'blue', 'lilac', 'night']
+
+// Админка на русском: подписи полов локальны и не зависят от словарей витрины
+const GENDER_NAMES = { men: 'Мужской', women: 'Женский', unisex: 'Унисекс' }
 
 const EMPTY_FORM = {
   name: '',
   slug: '',
   categoryId: '',
+  subcategoryId: '',
   gender: 'unisex',
   price: '',
   oldPrice: '',
@@ -35,6 +40,7 @@ const EMPTY_FORM = {
   reviews: 0,
   featured: false,
   published: true,
+  decor: false,
 }
 
 const ProductForm = ({ product, categories, onSaved, onCancel }) => {
@@ -49,6 +55,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         ...EMPTY_FORM,
         ...product,
         categoryId: String(product.categoryId ?? product.category?.id ?? ''),
+        subcategoryId: product.subcategoryId ? String(product.subcategoryId) : '',
         oldPrice: product.oldPrice ?? '',
       })
     } else {
@@ -59,6 +66,17 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
   const setField = (field) => (eventOrValue) => {
     const value = eventOrValue?.target ? eventOrValue.target.value : eventOrValue
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // Смена категории сбрасывает подкатегорию, если она из другой категории.
+  // Radix при инициализации контролируемого значения может дёрнуть onChange("") — игнорируем.
+  const onCategoryChange = (value) => {
+    if (!value) return
+    setForm((prev) => {
+      const category = categories.find((item) => String(item.id) === value)
+      const belongs = category?.subcategories?.some((item) => String(item.id) === prev.subcategoryId)
+      return { ...prev, categoryId: value, subcategoryId: belongs ? prev.subcategoryId : '' }
+    })
   }
 
   const toggleSize = (size) => {
@@ -104,6 +122,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         name: form.name,
         slug: form.slug,
         categoryId: Number(form.categoryId),
+        subcategoryId: form.subcategoryId ? Number(form.subcategoryId) : null,
         gender: form.gender,
         price: Number(form.price),
         oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
@@ -118,12 +137,13 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         reviews: Number(form.reviews),
         featured: form.featured,
         published: form.published,
+        decor: form.decor,
       }
       const data = product
         ? await API.admin.put(`/api/admin/products/${product.id}`, payload)
         : await API.admin.post('/api/admin/products', payload)
       toast.success(product ? 'Товар обновлён' : 'Товар создан', { description: data.product?.name })
-      onSaved()
+      onSaved(data.product)
     } catch (error) {
       toast.error('Ошибка сохранения', { description: error.message })
     } finally {
@@ -131,8 +151,12 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
     }
   }
 
+  const activeCategory = categories.find((item) => String(item.id) === String(form.categoryId))
+  const subcategories = activeCategory?.subcategories || []
+  const activeSubcategory = subcategories.find((item) => String(item.id) === String(form.subcategoryId))
+
   return (
-    <form onSubmit={submit} className="scrollbar-pixel max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+    <form onSubmit={submit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label className="text-xs text-purple-200">Название *</Label>
@@ -144,8 +168,10 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-purple-200">Категория *</Label>
-          <Select value={String(form.categoryId)} onValueChange={setField('categoryId')}>
-            <SelectTrigger className="border-purple-500/30 bg-[#0d0c1c]"><SelectValue placeholder="Выбери категорию" /></SelectTrigger>
+          <Select value={String(form.categoryId)} onValueChange={onCategoryChange}>
+            <SelectTrigger className="border-purple-500/30 bg-[#0d0c1c]">
+              <SelectValue placeholder="Выбери категорию">{activeCategory?.name || 'Выбери категорию'}</SelectValue>
+            </SelectTrigger>
             <SelectContent className="border-purple-500/30 bg-[#10101f]">
               {categories.map((category) => (
                 <SelectItem key={category.id} value={String(category.id)}>{category.name}</SelectItem>
@@ -154,28 +180,49 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-purple-200">Пол</Label>
-          <Select value={form.gender} onValueChange={setField('gender')}>
-            <SelectTrigger className="border-purple-500/30 bg-[#0d0c1c]"><SelectValue /></SelectTrigger>
+          <Label className="text-xs text-purple-200">Подкатегория</Label>
+          <Select
+            value={form.subcategoryId ? String(form.subcategoryId) : 'none'}
+            onValueChange={(value) => { if (value) setField('subcategoryId')(value === 'none' ? '' : value) }}
+          >
+            <SelectTrigger className="border-purple-500/30 bg-[#0d0c1c]">
+              <SelectValue placeholder="Без подкатегории">{activeSubcategory?.name || 'Без подкатегории'}</SelectValue>
+            </SelectTrigger>
             <SelectContent className="border-purple-500/30 bg-[#10101f]">
-              {GENDERS.filter((gender) => gender.value !== 'all').map((gender) => (
-                <SelectItem key={gender.value} value={gender.value}>{gender.name}</SelectItem>
+              <SelectItem value="none">Без подкатегории</SelectItem>
+              {subcategories.map((subcategory) => (
+                <SelectItem key={subcategory.id} value={String(subcategory.id)}>{subcategory.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-purple-200">Цена ₽ *</Label>
+          <Label className="text-xs text-purple-200">Пол</Label>
+          <Select value={form.gender} onValueChange={(value) => { if (value) setField('gender')(value) }}>
+            <SelectTrigger className="border-purple-500/30 bg-[#0d0c1c]">
+              <SelectValue>{GENDER_NAMES[form.gender] || 'Унисекс'}</SelectValue>
+            </SelectTrigger>
+            <SelectContent className="border-purple-500/30 bg-[#10101f]">
+              {GENDERS.filter((gender) => gender.value !== 'all').map((gender) => (
+                <SelectItem key={gender.value} value={gender.value}>{GENDER_NAMES[gender.value]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-purple-200">Цена *</Label>
           <Input required type="number" min="1" value={form.price} onChange={setField('price')} className="border-purple-500/30 bg-[#0d0c1c]" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-purple-200">Старая цена ₽ (для скидки)</Label>
+          <Label className="text-xs text-purple-200">Старая цена (для скидки)</Label>
           <Input type="number" min="0" value={form.oldPrice} onChange={setField('oldPrice')} placeholder="пусто = без скидки" className="border-purple-500/30 bg-[#0d0c1c]" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-purple-200">Лейбл</Label>
-          <Select value={form.label} onValueChange={setField('label')}>
-            <SelectTrigger className="border-purple-500/30 bg-[#0d0c1c]"><SelectValue /></SelectTrigger>
+          <Select value={form.label} onValueChange={(value) => { if (value) setField('label')(value) }}>
+            <SelectTrigger className="border-purple-500/30 bg-[#0d0c1c]">
+              <SelectValue>{form.label === 'none' ? 'Без лейбла' : LABELS[form.label]?.text || 'Без лейбла'}</SelectValue>
+            </SelectTrigger>
             <SelectContent className="border-purple-500/30 bg-[#10101f]">
               {Object.entries(LABELS).map(([value, config]) => (
                 <SelectItem key={value} value={value}>{value === 'none' ? 'Без лейбла' : config.text}</SelectItem>
@@ -184,7 +231,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-purple-200">Остаток на складе</Label>
+          <Label className="text-xs text-purple-200">Остаток на складе (0 = нет в наличии)</Label>
           <Input type="number" min="0" value={form.stock} onChange={setField('stock')} className="border-purple-500/30 bg-[#0d0c1c]" />
         </div>
       </div>
@@ -275,7 +322,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-6 pt-1">
+      <div className="flex flex-wrap gap-x-6 gap-y-3 pt-1">
         <label className="flex items-center gap-2 text-sm text-purple-200">
           <Switch checked={form.featured} onCheckedChange={setField('featured')} aria-label="Хит витрины" />
           Хит витрины (на главной)
@@ -283,6 +330,10 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         <label className="flex items-center gap-2 text-sm text-purple-200">
           <Switch checked={form.published} onCheckedChange={setField('published')} aria-label="Опубликовано" />
           Опубликовано
+        </label>
+        <label className="flex items-center gap-2 text-sm text-purple-200">
+          <Switch checked={form.decor} onCheckedChange={setField('decor')} aria-label="Товар-декор" />
+          Товар-декор (только в анимации главной, скрыт из каталога)
         </label>
       </div>
 

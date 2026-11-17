@@ -3,14 +3,15 @@ import ADMIN from '@/lib/admin'
 
 export const dynamic = 'force-dynamic'
 
-// POST /api/admin/auth — вход в админку по паролю, обмен на токен
+// POST /api/admin/auth — вход в админку по логину и паролю, обмен на токен
 const POST = async (request) => {
   try {
     const body = await request.json().catch(() => null)
+    const login = body && typeof body.login === 'string' ? body.login : ''
     const password = body && typeof body.password === 'string' ? body.password : ''
 
-    if (!ADMIN.verifyPassword(password)) {
-      return NextResponse.json({ error: 'Неверный пароль администратора' }, { status: 401 })
+    if (!ADMIN.verifyCredentials(login, password)) {
+      return NextResponse.json({ error: 'Неверный логин или пароль администратора' }, { status: 401 })
     }
 
     return NextResponse.json({ token: ADMIN.token() })

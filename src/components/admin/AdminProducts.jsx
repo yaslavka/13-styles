@@ -1,50 +1,32 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Loader2, Package } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, Pencil, Trash2, Package, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
-import { formatPrice } from '@/lib/constants'
+import useShop from '@/store/useShop'
+import useInfiniteList from '@/hooks/useInfiniteList'
+import useT from '@/hooks/useT'
+import { formatPrice, styleGradient } from '@/lib/constants'
 import GlassButton from '@/components/motion/GlassButton'
-import ProductForm from '@/components/admin/ProductForm'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Switch } from '@/components/ui/switch'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 
-// Управление товарами: таблица, создание/редактирование, удаление, быстрая публикация
+// Товары админки: карточки (не таблица), подгрузка по скроллу по 25 записей.
+// Товар «нет в наличии» остаётся в списке, декор помечается специальным бейджем.
 
-const AdminProducts = ({ categories }) => {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(null)
-  const [formOpen, setFormOpen] = useState(false)
+const AdminProducts = () => {
+  const navigate = useShop((state) => state.navigate)
+  const t = useT()
   const [deleting, setDeleting] = useState(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await API.admin.get('/api/admin/products')
-      setItems(data.items)
-    } catch (error) {
-      toast.error('Не удалось загрузить товары', { description: error.message })
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const buildUrl = (offset, pageSize) => `/api/admin/products?offset=${offset}&limit=${pageSize}`
 
-  useEffect(() => {
-    load()
-  }, [load])
-
-  const openCreate = () => {
-    setEditing(null)
-    setFormOpen(true)
-  }
-
-  const openEdit = (product) => {
-    setEditing(product)
-    setFormOpen(true)
-  }
+  const { items, total, loading, loadingMore, sentinelRef, reload, setItems } = useInfiniteList({
+    buildUrl,
+    fetcher: API.admin.get,
+    onError: (error) => toast.error('Не удалось загрузить товары', { description: error.message }),
+  })
 
   const togglePublished = async (product, published) => {
     try {
@@ -62,7 +44,7 @@ const AdminProducts = ({ categories }) => {
       await API.admin.del(`/api/admin/products/${deleting.id}`)
       toast.success('Товар удалён', { description: deleting.name })
       setDeleting(null)
-      load()
+      reload()
     } catch (error) {
       toast.error('Ошибка удаления', { description: error.message })
     }
@@ -70,106 +52,109 @@ const AdminProducts = ({ categories }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg text-white">Товары ({items.length})</h2>
-        <GlassButton tone="primary" onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" aria-hidden /> Новый товар
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-lg text-white">Товары ({total})</h2>
+        <GlassButton tone="primary" onClick={() => navigate('admin', { slug: 'product-new' })}>
+          <Plus className="mr-2 h-4 w-4" aria-hidden /> Добавить товар
         </GlassButton>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-7 w-7 animate-spin text-purple-400" aria-label="Загрузка" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="glass-card h-44 animate-pulse" />
+          ))}
+        </div>
+      ) : !items.length ? (
+        <div className="glass-panel flex flex-col items-center gap-3 py-16 text-center">
+          <Package className="h-10 w-10 text-purple-400/70" aria-hidden />
+          <p className="font-display text-lg font-bold text-white">Товаров пока нет</p>
+          <p className="text-sm text-muted-foreground">Добавьте первый товар — он появится на витрине сразу после публикации.</p>
         </div>
       ) : (
-        <div className="scrollbar-pixel rounded-2xl overflow-x-auto border border-purple-500/25 bg-card/70">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="border-b border-purple-500/25 text-left text-xs uppercase tracking-wider text-purple-300">
-                <th className="px-4 py-3">Товар</th>
-                <th className="px-4 py-3">Категория</th>
-                <th className="px-4 py-3">Цена</th>
-                <th className="px-4 py-3">Склад</th>
-                <th className="px-4 py-3">Витрина</th>
-                <th className="px-4 py-3 text-right">Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((product) => (
-                <tr key={product.id} className="border-b border-purple-500/10 transition-colors hover:bg-purple-500/5">
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="h-10 w-10 shrink-0 overflow-hidden rounded-sm border border-purple-500/30 bg-purple-500/10">
-                        {product.images?.[0] ? (
-                          <img src={product.images[0]} alt="" className="h-full w-full object-cover image-pixelated" />
-                        ) : (
-                          <Package className="m-2.5 h-5 w-5 text-purple-400" aria-hidden />
-                        )}
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {items.map((product) => {
+              const soldOut = (product.stock ?? 0) <= 0
+              return (
+                <article key={product.id} className="glass-card flex gap-3 p-3">
+                  <span className="relative h-28 w-24 shrink-0 overflow-hidden rounded-xl border border-purple-500/30" style={{ background: styleGradient(product.category?.style ?? 2) }}>
+                    {product.images?.[0] ? (
+                      <img src={product.images[0]} alt="" className="h-full w-full object-cover image-pixelated" />
+                    ) : (
+                      <Package className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-white/70" aria-hidden />
+                    )}
+                    {!product.published ? (
+                      <span className="absolute inset-0 grid place-items-center bg-black/65" aria-hidden>
+                        <EyeOff className="h-5 w-5 text-orange-300" />
                       </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-display text-purple-100">{product.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {product.slug} {product.label !== 'none' ? `· ${product.label.toUpperCase()}` : ''}
-                        </p>
+                    ) : null}
+                    {soldOut ? (
+                      <span className="absolute inset-x-1 bottom-1 rounded-md bg-red-950/85 px-1.5 py-0.5 text-center text-[10px] font-bold text-red-300">
+                        нет в наличии
+                      </span>
+                    ) : null}
+                  </span>
+
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <p className="truncate font-display text-sm font-bold text-white" title={product.name}>{product.name}</p>
+                    <p className="truncate text-[11px] text-muted-foreground" title={product.slug}>
+                      {product.slug}
+                      {product.decor ? ' · декор' : ''}
+                      {product.subcategory ? ` · ${product.subcategory.name}` : ''}
+                    </p>
+                    <p className="mt-0.5 truncate text-[11px] text-purple-300">{product.category?.name || '—'}</p>
+
+                    <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1.5">
+                      <span className="font-display text-sm font-bold text-orange-300">
+                        {formatPrice(product.price, 'ru')}
+                        {product.oldPrice ? <span className="ml-1.5 text-[11px] font-semibold text-muted-foreground line-through">{formatPrice(product.oldPrice, 'ru')}</span> : null}
+                      </span>
+                      <span className={`text-[11px] font-bold ${soldOut ? 'text-red-400' : 'text-purple-200'}`}>
+                        {product.stock} шт
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <Switch
+                          checked={product.published}
+                          onCheckedChange={(checked) => togglePublished(product, checked)}
+                          aria-label={`Опубликован: ${product.name}`}
+                        />
+                        витрина
+                      </label>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => navigate('admin', { slug: 'product-new', query: { id: String(product.id) } })}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-purple-500/40 text-purple-200 hover:bg-purple-500/15"
+                          aria-label={`Редактировать ${product.name}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleting(product)}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-orange-500/40 text-orange-300 hover:bg-orange-500/15"
+                          aria-label={`Удалить ${product.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                        </button>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-4 py-2.5 text-purple-200">{product.category?.name || '—'}</td>
-                  <td className="px-4 py-2.5">
-                    <span className="font-display text-orange-300">{formatPrice(product.price)}</span>
-                    {product.oldPrice ? <span className="ml-1.5 text-xs text-muted-foreground line-through">{formatPrice(product.oldPrice)}</span> : null}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span className={product.stock <= 3 ? 'font-display text-orange-400' : 'text-purple-200'}>{product.stock} шт</span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <Switch checked={product.published} onCheckedChange={(checked) => togglePublished(product, checked)} aria-label="Опубликован" />
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex justify-end gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(product)}
-                        className="grid h-8 w-8 place-items-center rounded-sm border border-purple-500/40 text-purple-200 hover:bg-purple-500/15"
-                        aria-label={`Редактировать ${product.name}`}
-                      >
-                        <Pencil className="h-3.5 w-3.5" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleting(product)}
-                        className="grid h-8 w-8 place-items-center rounded-sm border border-orange-500/40 text-orange-300 hover:bg-orange-500/15"
-                        aria-label={`Удалить ${product.name}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent aria-describedby={undefined} className="max-h-[85vh] max-w-2xl overflow-hidden border-purple-500/30 bg-[#0a0918]">
-          <DialogHeader>
-            <DialogTitle className="font-display text-purple-200">
-              {editing ? 'Редактирование товара' : 'Новый товар'}
-            </DialogTitle>
-          </DialogHeader>
-          <ProductForm
-            product={editing}
-            categories={categories}
-            onCancel={() => setFormOpen(false)}
-            onSaved={() => {
-              setFormOpen(false)
-              load()
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+          <div ref={sentinelRef} className="h-2" aria-hidden />
+          {loadingMore ? (
+            <p className="py-3 text-center font-display text-sm font-bold text-purple-300">Загружаем ещё товары…</p>
+          ) : null}
+        </>
+      )}
 
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => (open ? null : setDeleting(null))}>
         <AlertDialogContent className="border-orange-500/40 bg-[#0a0918]">

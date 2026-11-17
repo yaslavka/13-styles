@@ -15,15 +15,27 @@ datasource db {
 
 // Категория каталога (мужская одежда, женская, обувь, аксессуары)
 model Category {
-  id        Int       @id @default(autoincrement())
-  slug      String    @unique
-  name      String
-  subtitle  String
-  icon      String    @default("Shirt")
+  id            Int           @id @default(autoincrement())
+  slug          String        @unique
+  name          String
+  subtitle      String
+  icon          String        @default("Shirt")
   // Индекс одного из 13 градиентных стилей бренда PIXART (0..12)
-  style     Int       @default(0)
-  sort      Int       @default(0)
-  products  Product[]
+  style         Int           @default(0)
+  sort          Int           @default(0)
+  products      Product[]
+  subcategories Subcategory[]
+}
+
+// Подкатегория товаров внутри категории
+model Subcategory {
+  id         Int       @id @default(autoincrement())
+  slug       String    @unique
+  name       String
+  sort       Int       @default(0)
+  categoryId Int
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products   Product[]
 }
 
 // Товар маркетплейса
@@ -48,10 +60,25 @@ model Product {
   reviews     Int      @default(0)
   featured    Boolean  @default(false)
   published   Boolean  @default(true)
+  // Товар-декор: участвует в анимации главной, но скрывается из списков каталога
+  decor       Boolean  @default(false)
   categoryId  Int
-  category    Category @relation(fields: [categoryId], references: [id])
+  category    Category      @relation(fields: [categoryId], references: [id])
+  subcategoryId Int?
+  subcategory   Subcategory?  @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Покупатель маркетплейса (авторизация по логину и паролю)
+model User {
+  id           Int      @id @default(autoincrement())
+  login        String   @unique
+  name         String   @default("")
+  // scrypt: хранится как "salt:hash"
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // Заказ покупателя

@@ -219,133 +219,153 @@
   animation: px-marquee 28s linear infinite;
 }
 
-/* ===== Стеклянные поверхности (кнопки, карточки, панели) ===== */
-.glass-btn {
-  position: relative;
-  overflow: hidden;
-  border-radius: 999px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06) 45%, rgba(139, 92, 246, 0.14));
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -4px 10px rgba(10, 6, 30, 0.4),
-    0 10px 26px rgba(4, 3, 16, 0.5);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-}
-.glass-btn::before {
-  content: '';
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 2px;
-  height: 42%;
-  border-radius: 999px 999px 60% 60%;
-  background: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.02));
-  pointer-events: none;
-}
-.glass-btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.12);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -4px 10px rgba(10, 6, 30, 0.32),
-    0 16px 38px rgba(139, 92, 246, 0.38);
-}
-.glass-btn:active {
-  transform: translateY(0) scale(0.97);
+/* ===== Стеклянные поверхности (кнопки, карточки, панели) =====
+   Важно: все кастомные классы лежат в @layer components, иначе unlayered CSS
+   бьёт утилиты Tailwind (например, .glass-btn{position:relative} отключал .fixed
+   у плавающей кнопки чата — она уезжала в поток документа). */
+@layer components {
+  .glass-btn {
+    position: relative;
+    overflow: hidden;
+    border-radius: 999px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06) 45%, rgba(139, 92, 246, 0.14));
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -4px 10px rgba(10, 6, 30, 0.4),
+      0 10px 26px rgba(4, 3, 16, 0.5);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+  .glass-btn::before {
+    content: '';
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 2px;
+    height: 42%;
+    border-radius: 999px 999px 60% 60%;
+    background: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.02));
+    pointer-events: none;
+  }
+  .glass-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.12);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -4px 10px rgba(10, 6, 30, 0.32),
+      0 16px 38px rgba(139, 92, 246, 0.38);
+  }
+  .glass-btn:active {
+    transform: translateY(0) scale(0.97);
+  }
+
+  .glass-btn-primary {
+    background: linear-gradient(160deg, rgba(196, 140, 255, 0.85), rgba(139, 92, 246, 0.7) 40%, rgba(249, 115, 22, 0.72));
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  .glass-btn-orange {
+    background: linear-gradient(160deg, rgba(253, 186, 116, 0.9), rgba(249, 115, 22, 0.78) 45%, rgba(139, 92, 246, 0.6));
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  .glass-btn-ghost {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  }
+
+  .glass-card {
+    position: relative;
+    border-radius: 1.4rem;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03) 52%, rgba(139, 92, 246, 0.09));
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 18px 44px rgba(4, 3, 16, 0.5);
+  }
+
+  .glass-panel {
+    border-radius: 1.4rem;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 55%, rgba(59, 130, 246, 0.07));
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 14px 36px rgba(4, 3, 16, 0.45);
+  }
+
+  /* Стеклянная сфера для фона */
+  .bokeh {
+    position: absolute;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.06) 42%, transparent 70%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 -8px 18px rgba(139, 92, 246, 0.25), 0 8px 24px rgba(139, 92, 246, 0.14);
+    pointer-events: none;
+  }
+
+  /* Переливающаяся рамка карточки */
+  .glow-frame {
+    position: relative;
+  }
+  .glow-frame::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    padding: 1.5px;
+    border-radius: inherit;
+    background: linear-gradient(120deg, #8b5cf6, #f97316, #3b82f6, #c4b5fd, #8b5cf6);
+    background-size: 300% 300%;
+    animation: px-gradient-x 7s ease infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.5;
+    transition: opacity 0.35s ease;
+  }
+  .glow-frame:hover::before {
+    opacity: 1;
+  }
 }
 
-.glass-btn-primary {
-  background: linear-gradient(160deg, rgba(196, 140, 255, 0.85), rgba(139, 92, 246, 0.7) 40%, rgba(249, 115, 22, 0.72));
-  border-color: rgba(255, 255, 255, 0.4);
-}
-.glass-btn-orange {
-  background: linear-gradient(160deg, rgba(253, 186, 116, 0.9), rgba(249, 115, 22, 0.78) 45%, rgba(139, 92, 246, 0.6));
-  border-color: rgba(255, 255, 255, 0.4);
-}
-.glass-btn-ghost {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
-}
-
-.glass-card {
-  position: relative;
-  border-radius: 1.4rem;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03) 52%, rgba(139, 92, 246, 0.09));
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 18px 44px rgba(4, 3, 16, 0.5);
-}
-
-.glass-panel {
-  border-radius: 1.4rem;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 55%, rgba(59, 130, 246, 0.07));
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 14px 36px rgba(4, 3, 16, 0.45);
-}
-
-/* Стеклянная сфера для фона */
-.bokeh {
-  position: absolute;
-  border-radius: 9999px;
-  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.06) 42%, transparent 70%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 -8px 18px rgba(139, 92, 246, 0.25), 0 8px 24px rgba(139, 92, 246, 0.14);
-  pointer-events: none;
-}
-
-/* Переливающаяся рамка карточки */
-.glow-frame {
-  position: relative;
-}
-.glow-frame::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  padding: 1.5px;
-  border-radius: inherit;
-  background: linear-gradient(120deg, #8b5cf6, #f97316, #3b82f6, #c4b5fd, #8b5cf6);
-  background-size: 300% 300%;
-  animation: px-gradient-x 7s ease infinite;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0.5;
-  transition: opacity 0.35s ease;
-}
-.glow-frame:hover::before {
-  opacity: 1;
-}
-
-/* Скроллбар */
-.scrollbar-glass {
+/* ===== Скроллбары 13 STYLES: тонкие (максимум 5px), фирменный градиент ===== */
+* {
   scrollbar-width: thin;
-  scrollbar-color: rgba(139, 92, 246, 0.7) rgba(21, 17, 48, 0.7);
+  scrollbar-color: rgba(139, 92, 246, 0.9) rgba(21, 17, 48, 0.6);
 }
-.scrollbar-glass::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
-.scrollbar-glass::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: rgba(21, 17, 48, 0.6);
   border-radius: 999px;
 }
-.scrollbar-glass::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #8b5cf6, #f97316);
   border-radius: 999px;
-  border: 2px solid rgba(21, 17, 48, 0.6);
 }
-.scrollbar-glass::-webkit-scrollbar-thumb:hover {
+::-webkit-scrollbar-thumb:hover {
   background: #f97316;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Селективный вариант с прозрачным треком (для стеклянных поверхностей) */
+.scrollbar-glass {
+  scrollbar-color: rgba(139, 92, 246, 0.9) transparent;
+}
+.scrollbar-glass::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Пиксельные рендеры товаров и превью в админке */
+.image-pixelated {
+  image-rendering: pixelated;
 }
 
 .no-scrollbar::-webkit-scrollbar {

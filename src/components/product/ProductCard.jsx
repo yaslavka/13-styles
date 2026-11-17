@@ -15,6 +15,7 @@ import PriceTag from '@/components/motion/PriceTag'
 //  - фото-слайдер с плавным горизонтальным листанием при наведении мыши (без мигания)
 //  - лейблы (скидка/акция/хит), название, краткое описание
 //  - крупная текущая цена + мелкая перечёркнутая прошлая
+//  - товар «нет в наличии» остаётся на витрине, но кнопка покупки отключена
 
 const ProductCard = ({ product }) => {
   const { index, hovering, handlers, setIndex, hasMultiple, progress } = useHoverSlider(product.images)
@@ -25,10 +26,14 @@ const ProductCard = ({ product }) => {
   const t = useT()
 
   const images = product.images || []
-  const image = images[index] || images[0] || ''
+  const soldOut = (product.stock ?? 0) <= 0
 
   const quickAdd = (event) => {
     event.stopPropagation()
+    if (soldOut) {
+      toast.warning(t('product.outOfStock'), { description: t('product.outOfStockNote') })
+      return
+    }
     addToCart(product, { size: product.sizes?.[0] || '', qty: 1 })
     toast.success(t('toast.added'), { description: t('product.addedToastDesc', { name: product.name, qty: 1 }) })
     openCart()
@@ -99,16 +104,28 @@ const ProductCard = ({ product }) => {
           </div>
         ) : null}
 
-        <div className="absolute inset-x-4 bottom-4 translate-y-[135%] transition-transform duration-300 ease-out group-hover:translate-y-0">
+        {soldOut ? (
+          <span
+            className="absolute bottom-3 left-3 z-10 rounded-full border border-red-400/50 bg-[#1a0a12]/90 px-3 py-1 font-display text-[11px] font-bold uppercase tracking-wide text-red-300"
+            role="status"
+          >
+            {t('product.outOfStock')}
+          </span>
+        ) : null}
+
+        <div className={`absolute inset-x-4 bottom-4 translate-y-[135%] transition-transform duration-300 ease-out group-hover:translate-y-0 ${soldOut ? 'opacity-90' : ''}`}>
           <motion.button
             type="button"
-            whileTap={{ scale: 0.94 }}
+            whileTap={{ scale: soldOut ? 1 : 0.94 }}
             onClick={quickAdd}
-            className="glass-btn glass-btn-orange flex w-full items-center justify-center gap-2 rounded-full py-3 font-display text-sm font-bold text-white"
-            aria-label={`${t('product.addToCart')}: ${product.name}`}
+            disabled={soldOut}
+            className={`glass-btn flex w-full items-center justify-center gap-2 rounded-full py-3 font-display text-sm font-bold text-white ${
+              soldOut ? 'glass-btn-ghost opacity-80' : 'glass-btn-orange'
+            }`}
+            aria-label={`${soldOut ? t('product.outOfStock') : t('product.addToCart')}: ${product.name}`}
           >
             <ShoppingCart className="h-4 w-4" aria-hidden />
-            {t('product.addToCart')}
+            {soldOut ? t('product.outOfStock') : t('product.addToCart')}
           </motion.button>
         </div>
       </div>

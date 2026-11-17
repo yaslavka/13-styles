@@ -15,14 +15,14 @@ const Page = async () => {
     initialCategories = await CACHE.wrap('ssr:categories', 60000, async () => {
       const rows = await db.category.findMany({
         orderBy: { sort: 'asc' },
-        include: { _count: { select: { products: { where: { published: true } } } } },
+        include: { _count: { select: { products: { where: { published: true, decor: false } } } } },
       })
       return rows.map((row) => DTO.toCategoryDTO(row, row._count ? row._count.products : 0))
     })
 
     initialProducts = await CACHE.wrap('ssr:featured', 20000, async () => {
       const rows = await db.product.findMany({
-        where: { published: true, featured: true },
+        where: { published: true, featured: true, decor: false },
         include: { category: true },
         orderBy: { createdAt: 'desc' },
         take: 8,
