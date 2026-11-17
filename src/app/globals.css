@@ -1,0 +1,326 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Pixelify Sans', 'Press Start 2P', ui-monospace, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Тёмная пиксельная тема PIXART — единственная тема маркетплейса */
+:root {
+  --radius: 0.125rem;
+  --background: #07070f;
+  --foreground: #efeaff;
+  --card: #0d0c1c;
+  --card-foreground: #efeaff;
+  --popover: #10101f;
+  --popover-foreground: #efeaff;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #1b1430;
+  --secondary-foreground: #e9e6ff;
+  --muted: #15112a;
+  --muted-foreground: #9c95bd;
+  --accent: #241a3e;
+  --accent-foreground: #f4efff;
+  --destructive: #f97316;
+  --border: rgba(139, 92, 246, 0.24);
+  --input: rgba(139, 92, 246, 0.3);
+  --ring: #8b5cf6;
+  --chart-1: #8b5cf6;
+  --chart-2: #f97316;
+  --chart-3: #3b82f6;
+  --chart-4: #fdba74;
+  --chart-5: #c4b5fd;
+  --sidebar: #0d0c1c;
+  --sidebar-foreground: #efeaff;
+  --sidebar-primary: #8b5cf6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #241a3e;
+  --sidebar-accent-foreground: #f4efff;
+  --sidebar-border: rgba(139, 92, 246, 0.24);
+  --sidebar-ring: #8b5cf6;
+}
+
+.dark {
+  --background: #07070f;
+  --foreground: #efeaff;
+  --card: #0d0c1c;
+  --card-foreground: #efeaff;
+  --popover: #10101f;
+  --popover-foreground: #efeaff;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #1b1430;
+  --secondary-foreground: #e9e6ff;
+  --muted: #15112a;
+  --muted-foreground: #9c95bd;
+  --accent: #241a3e;
+  --accent-foreground: #f4efff;
+  --destructive: #f97316;
+  --border: rgba(139, 92, 246, 0.24);
+  --input: rgba(139, 92, 246, 0.3);
+  --ring: #8b5cf6;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Pixelify Sans', 'Press Start 2P', ui-monospace, monospace;
+    letter-spacing: 0.01em;
+  }
+  ::selection {
+    background: rgba(139, 92, 246, 0.55);
+    color: #ffffff;
+  }
+  :focus-visible {
+    outline: 2px solid #f97316;
+    outline-offset: 2px;
+  }
+}
+
+/* ===== Ключевые кадры анимаций PIXART ===== */
+@keyframes px-shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+@keyframes px-gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes px-float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes px-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(60px, -40px) scale(1.15); }
+  66% { transform: translate(-40px, 30px) scale(0.9); }
+}
+@keyframes px-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1.05); }
+  50% { transform: translate(-70px, 50px) scale(0.85); }
+}
+@keyframes px-drift-c {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(50px, 60px) rotate(12deg); }
+}
+@keyframes px-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@keyframes px-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes px-spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes px-glow-pulse {
+  0%, 100% { opacity: 0.55; filter: blur(18px); }
+  50% { opacity: 1; filter: blur(26px); }
+}
+@keyframes px-scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(400%); }
+}
+@keyframes px-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== Утилиты ===== */
+.font-display {
+  font-family: 'Pixelify Sans', 'Press Start 2P', ui-monospace, monospace;
+}
+
+.text-shimmer {
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: px-shimmer 5s linear infinite;
+}
+
+.animate-gradient-x {
+  background-size: 220% 220%;
+  animation: px-gradient-x 9s ease infinite;
+}
+
+.animate-float-y {
+  animation: px-float-y 5s ease-in-out infinite;
+}
+
+.animate-drift-a {
+  animation: px-drift-a 18s ease-in-out infinite;
+}
+.animate-drift-b {
+  animation: px-drift-b 23s ease-in-out infinite;
+}
+.animate-drift-c {
+  animation: px-drift-c 27s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: px-blink 1.4s step-end infinite;
+}
+
+.animate-spin-slow {
+  animation: px-spin-slow 14s linear infinite;
+}
+
+.animate-glow-pulse {
+  animation: px-glow-pulse 4.5s ease-in-out infinite;
+}
+
+.animate-pop {
+  animation: px-pop 0.35s ease-out both;
+}
+
+.marquee-track {
+  animation: px-marquee 26s linear infinite;
+}
+
+/* Пиксельные срезанные углы */
+.pixel-corners {
+  clip-path: polygon(
+    0 8px, 8px 8px, 8px 0,
+    calc(100% - 8px) 0, calc(100% - 8px) 8px, 100% 8px,
+    100% calc(100% - 8px), calc(100% - 8px) calc(100% - 8px), calc(100% - 8px) 100%,
+    8px 100%, 8px calc(100% - 8px), 0 calc(100% - 8px)
+  );
+}
+.pixel-corners-sm {
+  clip-path: polygon(
+    0 5px, 5px 5px, 5px 0,
+    calc(100% - 5px) 0, calc(100% - 5px) 5px, 100% 5px,
+    100% calc(100% - 5px), calc(100% - 5px) calc(100% - 5px), calc(100% - 5px) 100%,
+    5px 100%, 5px calc(100% - 5px), 0 calc(100% - 5px)
+  );
+}
+
+/* Пиксельная сетка фона */
+.bg-pixel-grid {
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.image-pixelated {
+  image-rendering: pixelated;
+}
+
+/* Сканлайны CRT */
+.scanlines {
+  position: relative;
+}
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(5, 5, 12, 0.22) 0 2px, transparent 2px 5px);
+  mix-blend-mode: multiply;
+}
+
+/* Пиксельный скроллбар */
+.scrollbar-pixel {
+  scrollbar-width: thin;
+  scrollbar-color: #8b5cf6 #15112a;
+}
+.scrollbar-pixel::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-pixel::-webkit-scrollbar-track {
+  background: #15112a;
+}
+.scrollbar-pixel::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #8b5cf6, #f97316);
+  border: 2px solid #15112a;
+}
+.scrollbar-pixel::-webkit-scrollbar-thumb:hover {
+  background: #f97316;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Переливающаяся рамка карточки */
+.glow-frame {
+  position: relative;
+}
+.glow-frame::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  background: linear-gradient(120deg, #8b5cf6, #f97316, #3b82f6, #c4b5fd, #8b5cf6);
+  background-size: 300% 300%;
+  animation: px-gradient-x 6s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.55;
+  transition: opacity 0.3s ease;
+}
+.glow-frame:hover::before {
+  opacity: 1;
+}

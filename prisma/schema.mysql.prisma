@@ -1,0 +1,69 @@
+// PIXART MARKET — Prisma schema для MySQL
+// Инструкция перехода с SQLite:
+//   1. cp prisma/schema.mysql.prisma prisma/schema.prisma
+//   2. В .env задать: DATABASE_URL="mysql://user:password@host:3306/pixart"
+//   3. bun run db:push
+// Логика кода не меняется: DTO-слой работает с JSON-строками одинаково на обеих СУБД.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique @db.VarChar(64)
+  name      String    @db.VarChar(120)
+  subtitle  String    @db.VarChar(200)
+  icon      String    @default("Shirt") @db.VarChar(40)
+  style     Int       @default(0)
+  sort      Int       @default(0)
+  products  Product[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique @db.VarChar(120)
+  name        String   @db.VarChar(160)
+  shortDesc   String   @db.VarChar(300)
+  description String   @db.Text
+  price       Float
+  oldPrice    Float?
+  gender      String   @default("unisex") @db.VarChar(16)
+  sizes       String   @default("[]") @db.Text
+  colors      String   @default("[]") @db.Text
+  images      String   @default("[]") @db.Text
+  label       String   @default("none") @db.VarChar(16)
+  stock       Int      @default(10)
+  rating      Float    @default(4.8)
+  reviews     Int      @default(0)
+  featured    Boolean  @default(false)
+  published   Boolean  @default(true)
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([published, featured])
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(40)
+  customer  String   @db.VarChar(120)
+  phone     String   @db.VarChar(32)
+  address   String   @db.VarChar(255)
+  comment   String   @default("") @db.VarChar(600)
+  total     Float
+  status    String   @default("new") @db.VarChar(16)
+  items     String   @default("[]") @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}

@@ -1,0 +1,12 @@
+{
+  "name": "pixart-chat-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot index.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}

@@ -1,0 +1,15 @@
+[test] user connect_error: websocket error
+[test] support connect_error: websocket error
+[test] PASS support hello done
+[test] support connect_error: websocket error
+[test] user connect_error: websocket error
+[test] user connect_error: websocket error
+[test] support connect_error: websocket error
+[test] support connect_error: websocket error
+[test] user connect_error: websocket error
+[test] support connect_error: websocket error
+[test] user connect_error: websocket error
+[test] support connect_error: websocket error
+[test] user connect_error: websocket error
+[test] WATCHDOG TIMEOUT — aborting
+[test] watchdog summary: 1/1 passed

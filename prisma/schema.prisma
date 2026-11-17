@@ -1,0 +1,71 @@
+// PIXART MARKET — Prisma schema
+// По умолчанию используется SQLite (файл db/custom.db).
+// Для перехода на MySQL используйте prisma/schema.mysql.prisma:
+//   cp prisma/schema.mysql.prisma prisma/schema.prisma && bun run db:push
+// и задайте DATABASE_URL вида mysql://user:pass@host:3306/pixart
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Категория каталога (мужская одежда, женская, обувь, аксессуары)
+model Category {
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
+  name      String
+  subtitle  String
+  icon      String    @default("Shirt")
+  // Индекс одного из 13 градиентных стилей бренда PIXART (0..12)
+  style     Int       @default(0)
+  sort      Int       @default(0)
+  products  Product[]
+}
+
+// Товар маркетплейса
+model Product {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique
+  name        String
+  shortDesc   String   @default("")
+  description String   @default("")
+  price       Float
+  oldPrice    Float?
+  // men | women | unisex
+  gender      String   @default("unisex")
+  // JSON-строки (Prisma primitive list недоступен) — парсится в DTO слое
+  sizes       String   @default("[]")
+  colors      String   @default("[]")
+  images      String   @default("[]")
+  // none | new | hit | sale
+  label       String   @default("none")
+  stock       Int      @default(10)
+  rating      Float    @default(4.8)
+  reviews     Int      @default(0)
+  featured    Boolean  @default(false)
+  published   Boolean  @default(true)
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Заказ покупателя
+model Order {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  customer  String
+  phone     String
+  address   String
+  comment   String   @default("")
+  total     Float
+  // new | confirmed | shipped | done | canceled
+  status    String   @default("new")
+  // JSON [{productId, slug, name, price, qty, size, image}]
+  items     String   @default("[]")
+  createdAt DateTime @default(now())
+}
