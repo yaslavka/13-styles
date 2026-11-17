@@ -213,8 +213,8 @@ const runCompose = async (limit) => {
 
 // ---------- db ----------
 const runDb = async () => {
-  const { db } = await import('./src/lib/db.js')
-  const { slugify } = await import('./src/lib/constants.js')
+  const { db } = await import('../src/lib/db.js')
+  const { slugify } = await import('../src/lib/constants.js')
   const plan = JSON.parse(fs.readFileSync(PLAN_PATH, 'utf-8'))
   const products = loadPlan()
   const verdicts = loadVerdicts()
