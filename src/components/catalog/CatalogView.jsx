@@ -25,8 +25,6 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, D
 // в persist-сторе useShop. Фильтры применяются мгновенно, кнопка Apply просто закрывает щит.
 
 const LABEL_FILTERS = ['new', 'hit', 'sale']
-const RATING_OPTIONS = [0, 4.5, 4.8]
-
 const CHIP_ACTIVE = 'glass-btn glass-btn-primary text-white'
 const CHIP_ACTIVE_ORANGE = 'glass-btn glass-btn-orange text-white'
 const CHIP_GHOST = 'glass-btn glass-btn-ghost text-purple-200'
@@ -338,7 +336,7 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
           </div>
         </section>
 
-        {/* Размеры: одежда + обувь — компактные чипы лентой, как было */}
+        {/* Размеры: одежда — чипы лентой; обувь — свой заголовок над чипами */}
         <section aria-label={t('catalog.sizes')}>
           <SectionTitle>{t('catalog.sizes')}</SectionTitle>
           <div role="group" aria-label={t('catalog.sizes')} className="space-y-3">
@@ -355,21 +353,23 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300/70">
+            <div className="space-y-2">
+              <h4 className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-purple-200">
                 {t('catalog.sizeShoes')}
-              </span>
-              {SHOE_SIZES.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => toggleSize(size)}
-                  aria-pressed={filters.sizes.includes(size)}
-                  className={chipClass(filters.sizes.includes(size), 'orange')}
-                >
-                  {size}
-                </button>
-              ))}
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {SHOE_SIZES.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleSize(size)}
+                    aria-pressed={filters.sizes.includes(size)}
+                    className={chipClass(filters.sizes.includes(size), 'orange')}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -413,21 +413,23 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
           </button>
         </section>
 
-        {/* Минимальный рейтинг — кнопки в столбик */}
+        {/* Минимальный рейтинг — range-слайдер (0 = любой), как у цены */}
         <section aria-label={t('catalog.rating')}>
           <SectionTitle>{t('catalog.rating')}</SectionTitle>
-          <div role="group" aria-label={t('catalog.rating')} className="flex flex-col gap-1.5">
-            {RATING_OPTIONS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setFilter({ rating: value })}
-                aria-pressed={activeRating === value}
-                className={ROW_CLASS(activeRating === value, 'orange')}
-              >
-                {value === 0 ? t('catalog.ratingAny') : `${value}+`}
-              </button>
-            ))}
+          <div className="px-1.5">
+            <Slider
+              value={[activeRating]}
+              min={0}
+              max={5}
+              step={0.1}
+              onValueChange={([value]) => setFilter({ rating: Math.max(0, Math.min(5, Number(value.toFixed(1)))) })}
+              aria-label={t('catalog.rating')}
+              className="[&_[data-slot=slider-range]]:bg-gradient-to-r [&_[data-slot=slider-range]]:from-purple-500 [&_[data-slot=slider-range]]:to-orange-400 [&_[data-slot=slider-thumb]]:size-4.5 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:border-orange-300 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_0_10px_rgba(249,115,22,0.5)] [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:border [&_[data-slot=slider-track]]:border-white/15 [&_[data-slot=slider-track]]:bg-white/10"
+            />
+            <div className="mt-1.5 flex justify-between text-[10px] font-bold tracking-wider text-purple-300/70">
+              <span className="text-orange-200">{activeRating > 0 ? `${activeRating.toFixed(1)}+ ★` : t('catalog.ratingAny')}</span>
+              <span>5.0 ★</span>
+            </div>
           </div>
         </section>
       </div>

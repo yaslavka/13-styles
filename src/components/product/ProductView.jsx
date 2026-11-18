@@ -131,9 +131,9 @@ const ProductView = ({ product, related = [] }) => {
     : href('catalog')
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Хлебные крошки (SEO + навигация) */}
-      <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-sm font-bold">
+      <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap items-center gap-2 text-xs font-bold sm:mb-6 sm:text-sm">
         <Link href={href('home')} className="text-purple-300 transition-colors hover:text-orange-300">
           13 STYLES
         </Link>
@@ -156,7 +156,9 @@ const ProductView = ({ product, related = [] }) => {
         <span className="text-purple-100">{product.name}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-2">
+      {/* grid-cols-1 (minmax(0,1fr)) обязателен: без явной колонки auto-трек +
+          Swiper внутри aspect-square создаёт цикл по ширине — слайдер раздувается до 33Мpx на мобильных */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-10">
         <div onMouseEnter={startHoverCycle} onMouseLeave={stopHoverCycle}>
           <motion.div
             initial={{ opacity: 0, scale: 0.97 }}
@@ -224,7 +226,7 @@ const ProductView = ({ product, related = [] }) => {
                     event.stopPropagation()
                     swiperRef.current?.slidePrev()
                   }}
-                  className="glass-btn glass-btn-ghost absolute left-3 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center"
+                  className="glass-btn glass-btn-ghost absolute left-2 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center sm:left-3 sm:h-11 sm:w-11"
                   aria-label={t('product.prevPhoto')}
                 >
                   <ChevronLeft className="h-5 w-5 text-white" aria-hidden />
@@ -235,7 +237,7 @@ const ProductView = ({ product, related = [] }) => {
                     event.stopPropagation()
                     swiperRef.current?.slideNext()
                   }}
-                  className="glass-btn glass-btn-ghost absolute right-3 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center"
+                  className="glass-btn glass-btn-ghost absolute right-2 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center sm:right-3 sm:h-11 sm:w-11"
                   aria-label={t('product.nextPhoto')}
                 >
                   <ChevronRight className="h-5 w-5 text-white" aria-hidden />
@@ -261,13 +263,13 @@ const ProductView = ({ product, related = [] }) => {
             ) : null}
 
             <span className="glass-btn glass-btn-ghost absolute bottom-4 right-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold text-purple-200">
-              <ZoomIn className="h-3.5 w-3.5 text-orange-300" aria-hidden />
-              {t('product.zoomHint')}
+              <ZoomIn className="h-3.5 w-3.5 shrink-0 text-orange-300" aria-hidden />
+              <span className="hidden sm:inline">{t('product.zoomHint')}</span>
             </span>
           </motion.div>
 
           {hasMultiple ? (
-            <div className="mt-4 grid grid-cols-3 gap-4">
+            <div className="mt-3 grid grid-cols-3 gap-2.5 sm:mt-4 sm:gap-4">
               {images.map((thumb, thumbIndex) => (
                 <button
                   key={thumb}
@@ -306,8 +308,8 @@ const ProductView = ({ product, related = [] }) => {
             </span>
           </div>
 
-          <h1 className="mt-4 font-display text-4xl font-extrabold text-white sm:text-5xl">{product.name}</h1>
-          <p className="mt-3 text-base font-semibold leading-relaxed text-muted-foreground">{product.shortDesc}</p>
+          <h1 className="mt-3 font-display text-2xl font-extrabold leading-tight text-white sm:mt-4 sm:text-4xl lg:text-5xl">{product.name}</h1>
+          <p className="mt-2 text-sm font-semibold leading-relaxed text-muted-foreground sm:mt-3 sm:text-base">{product.shortDesc}</p>
 
           <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
             <PriceTag price={product.price} oldPrice={product.oldPrice} size="lg" />
@@ -341,8 +343,8 @@ const ProductView = ({ product, related = [] }) => {
             </div>
           ) : null}
 
-          <div className="mt-7 flex flex-wrap items-center gap-3.5">
-            <div className={`glass-btn glass-btn-ghost flex items-center rounded-full ${soldOut ? 'pointer-events-none opacity-50' : ''}`}>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3.5">
+            <div className={`glass-btn glass-btn-ghost flex items-center justify-center self-center rounded-full ${soldOut ? 'pointer-events-none opacity-50' : ''}`}>
               <button
                 type="button"
                 onClick={() => setQty((value) => Math.max(1, value - 1))}
@@ -366,7 +368,7 @@ const ProductView = ({ product, related = [] }) => {
 
             <GlassButton
               tone="orange"
-              className={`h-12 px-7 ${soldOut ? 'pointer-events-none opacity-50' : ''}`}
+              className={`h-12 w-full justify-center px-7 sm:w-auto ${soldOut ? 'pointer-events-none opacity-50' : ''}`}
               onClick={() => handleAdd(false)}
               disabled={soldOut}
             >
@@ -374,7 +376,7 @@ const ProductView = ({ product, related = [] }) => {
             </GlassButton>
             <GlassButton
               tone="primary"
-              className={`h-12 px-7 ${soldOut ? 'pointer-events-none opacity-50' : ''}`}
+              className={`h-12 w-full justify-center px-7 sm:w-auto ${soldOut ? 'pointer-events-none opacity-50' : ''}`}
               onClick={() => handleAdd(true)}
               disabled={soldOut}
             >
@@ -399,10 +401,10 @@ const ProductView = ({ product, related = [] }) => {
             </p>
           )}
 
-          <div className="glass-panel mt-7 p-6">
-            <h2 className="font-display text-xl font-bold text-white">{t('product.description')}</h2>
+          <div className="glass-panel mt-7 p-4 sm:p-6">
+            <h2 className="font-display text-lg font-bold text-white sm:text-xl">{t('product.description')}</h2>
             <p className="mt-3 text-sm font-semibold leading-relaxed text-muted-foreground">{product.description}</p>
-            <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm font-semibold">
+            <dl className="mt-5 grid grid-cols-1 gap-y-2.5 text-sm font-semibold sm:grid-cols-2 sm:gap-x-6">
               <dt className="text-muted-foreground">{t('product.brand')}</dt>
               <dd className="text-purple-200">13 STYLES</dd>
               <dt className="text-muted-foreground">{t('product.age')}</dt>
@@ -430,9 +432,9 @@ const ProductView = ({ product, related = [] }) => {
       </div>
 
       {related.length ? (
-        <section className="mt-16" aria-label="Related products">
+        <section className="mt-12 sm:mt-16" aria-label="Related products">
           <Reveal>
-            <h2 className="mb-8 font-display text-3xl font-extrabold text-white sm:text-4xl">{t('product.related')}</h2>
+            <h2 className="mb-6 font-display text-2xl font-extrabold text-white sm:mb-8 sm:text-4xl">{t('product.related')}</h2>
           </Reveal>
           <ProductGrid products={related} />
         </section>

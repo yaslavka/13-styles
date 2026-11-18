@@ -45,8 +45,10 @@ const LightboxGallery = ({ open, images = [], index = 0, onIndexChange, onClose,
         <DialogTitle className="sr-only">{alt}</DialogTitle>
         <DialogDescription className="sr-only">{t('product.zoomHint')}</DialogDescription>
 
-        {/* Сцена Swiper: все фото смонтированы заранее, слайды скользят — без миганий */}
-        <div className="relative h-full w-full overflow-hidden">
+        {/* Сцена Swiper: все фото смонтированы заранее, слайды скользят — без миганий.
+            isolate — обязательный stacking-контекст: без него z-index:1 у .swiper/.swiper-wrapper
+            (из CSS Swiper) рисуется ПОВЕРХ кнопки Close, и лайтбокс нельзя закрыть */}
+        <div className="relative h-full w-full isolate overflow-hidden">
           <Swiper
             modules={[A11y, Keyboard]}
             onSwiper={(swiper) => {
@@ -80,7 +82,7 @@ const LightboxGallery = ({ open, images = [], index = 0, onIndexChange, onClose,
               <button
                 type="button"
                 onClick={goPrev}
-                className="glass-btn glass-btn-ghost absolute left-4 top-1/2 z-10 grid h-12 w-12 -translate-y-1/2 place-items-center"
+                className="glass-btn glass-btn-ghost absolute left-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center sm:left-4 sm:h-12 sm:w-12"
                 aria-label={t('product.prevPhoto')}
               >
                 <ChevronLeft className="h-6 w-6 text-white" aria-hidden />
@@ -88,13 +90,13 @@ const LightboxGallery = ({ open, images = [], index = 0, onIndexChange, onClose,
               <button
                 type="button"
                 onClick={goNext}
-                className="glass-btn glass-btn-ghost absolute right-4 top-1/2 z-10 grid h-12 w-12 -translate-y-1/2 place-items-center"
+                className="glass-btn glass-btn-ghost absolute right-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center sm:right-4 sm:h-12 sm:w-12"
                 aria-label={t('product.nextPhoto')}
               >
                 <ChevronRight className="h-6 w-6 text-white" aria-hidden />
               </button>
 
-              <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2.5">
+              <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 sm:bottom-6">
                 {images.map((src, dotIndex) => (
                   <button
                     key={src}
@@ -112,7 +114,7 @@ const LightboxGallery = ({ open, images = [], index = 0, onIndexChange, onClose,
               </div>
             </>
           ) : (
-            <span className="glass-btn glass-btn-ghost pointer-events-none absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold text-purple-200">
+            <span className="glass-btn glass-btn-ghost pointer-events-none absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold text-purple-200 sm:bottom-6">
               <ZoomIn className="h-3.5 w-3.5 text-orange-300" aria-hidden />
               {t('product.zoomHint')}
             </span>
