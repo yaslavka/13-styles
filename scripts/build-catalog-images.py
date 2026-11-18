@@ -10,7 +10,7 @@ import os
 import sys
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import cv2
 import numpy as np
@@ -23,7 +23,7 @@ MANIFEST_PATH = os.path.join(ROOT, 'data', 'catalog-manifest.json')
 OUT_DIR = os.path.join(ROOT, 'public', 'products', 'catalog')
 LOG_PATH = os.path.join(ROOT, 'data', 'catalog-images.log')
 
-WORKERS = 10          # одновременных товаров (каждый: 3 фото + детект)
+WORKERS = 8          # процессов (изоляция: segfault в cv2 не убивает скрипт)
 MAX_IMAGES = 3        # фото на товар
 DL_TIMEOUT = 20       # сек на запрос
 MAX_SIDE = 1200       # верхний предел размера (без апскейла)
@@ -55,7 +55,7 @@ def get_detectors():
 
 def has_person(pil_img):
     """True — на фото обнаружен человек или часть человека."""
-    get_detectors()
+    get_detectors()  # в отдельном процессе загрузится один раз
     scale = 480.0 / max(pil_img.size)
     small = pil_img if scale >= 1 else pil_img.resize(
         (max(1, int(pil_img.width * scale)), max(1, int(pil_img.height * scale))), Image.BILINEAR)
@@ -106,7 +106,7 @@ def process_product(product):
     Возвращает (slug, status, images) где status: ok|person|no_images"""
     slug = product['slug']
     urls = product['images'][:MAX_IMAGES]
-    frames = []          # [(n, raw, PIL)] в памяти, сохраняем только чистые
+    frames = []          # [(n, PIL)] в памяти, сохраняем только чистые
     for n, url in enumerate(urls, 1):
         raw = fetch(url)
         if not raw:
@@ -117,15 +117,14 @@ def process_product(product):
                 img = img.convert('RGB')
         except Exception:
             continue
-        frames.append((n, raw, img))
-    if not frames:
-        return slug, 'no_images', []
-    # Бракуем товар, если ЛЮБОЕ фото содержит человека
-    for n, _raw, img in frames:
+        # Брак сразу при первом фото с человеком — остальное не качаем
         if has_person(img):
             return slug, 'person', []
+        frames.append((n, img))
+    if not frames:
+        return slug, 'no_images', []
     images = []
-    for n, _raw, img in frames:
+    for n, img in frames:
         w, h = img.size
         if max(w, h) > MAX_SIDE:
             k = MAX_SIDE / float(max(w, h))
@@ -151,10 +150,10 @@ def load_resume():
     return by_slug
 
 
-def save_manifest(manifest, total):
+def save_manifest(manifest, total, rejected):
     manifest = sorted(manifest, key=lambda p: p['slug'])
     json.dump({'generatedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-               'processed': total, 'products': manifest},
+               'cleanTotal': total, 'rejected': sorted(rejected), 'products': manifest},
               open(MANIFEST_PATH, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
 
@@ -164,13 +163,19 @@ def main():
     products = plan['products']
     clean = load_resume()
     manifest = [{'slug': s, 'images': imgs} for s, imgs in clean.items()]
-    todo = [p for p in products if p['slug'] not in clean]
+    rejected = set()
+    if os.path.exists(MANIFEST_PATH):
+        try:
+            rejected = set(json.load(open(MANIFEST_PATH, encoding='utf-8')).get('rejected') or [])
+        except Exception:
+            rejected = set()
+    todo = [p for p in products if p['slug'] not in clean and p['slug'] not in rejected]
     stats = {'ok': 0, 'person': 0, 'no_images': 0}
     done = 0
-    log(f"старт: всего {len(products)}, готово с прошлого запуска {len(clean)}, к обработке {len(todo)}")
+    log(f"старт: всего {len(products)}, чисто на диске {len(clean)}, брак ранее {len(rejected)}, к обработке {len(todo)}")
 
     lock = threading.Lock()
-    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+    with ProcessPoolExecutor(max_workers=WORKERS) as pool:
         futures = {pool.submit(process_product, p): p['slug'] for p in todo}
         for fut in as_completed(futures):
             slug = futures[fut]
@@ -186,11 +191,13 @@ def main():
                 stats[status] += 1
                 if status == 'ok':
                     manifest.append({'slug': slug, 'images': images})
-                if done % 50 == 0:
+                if status == 'person':
+                    rejected.add(slug)
+                if done % 100 == 0:
                     log(f"{done}/{len(todo)} • чисто {stats['ok']} • с человеком {stats['person']} • без фото {stats['no_images']}")
-                    save_manifest(manifest, len(products))
+                    save_manifest(manifest, len(products), rejected)
 
-    save_manifest(manifest, len(products))
+    save_manifest(manifest, len(products), rejected)
     log(f"ГОТОВО: чисто {stats['ok']} (+{len(clean)} ранее) / {len(products)} • брак(человек) {stats['person']} • без фото {stats['no_images']}")
 
 
