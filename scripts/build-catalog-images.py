@@ -136,21 +136,42 @@ def process_product(product):
     return slug, 'ok', images
 
 
+def load_resume():
+    """Файлы {slug}-{n}.webp на диске = уже чистые товары прошлых запусков."""
+    by_slug = {}
+    if not os.path.isdir(OUT_DIR):
+        return by_slug
+    for fname in os.listdir(OUT_DIR):
+        if fname.endswith('.webp') and '-' in fname:
+            slug = fname.rsplit('-', 1)[0]
+            rel = f"/products/catalog/{fname}"
+            by_slug.setdefault(slug, []).append(rel)
+    for slug in by_slug:
+        by_slug[slug].sort(key=lambda s: int(s.rsplit('-', 1)[1].split('.')[0]))
+    return by_slug
+
+
+def save_manifest(manifest, total):
+    manifest = sorted(manifest, key=lambda p: p['slug'])
+    json.dump({'generatedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+               'processed': total, 'products': manifest},
+              open(MANIFEST_PATH, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
-    for stale in os.listdir(OUT_DIR):
-        os.remove(os.path.join(OUT_DIR, stale))
     plan = json.load(open(PLAN_PATH, encoding='utf-8'))
     products = plan['products']
-    log(f"старт: товаров {len(products)}, воркеров {WORKERS}, фото до {MAX_IMAGES} на товар")
-
-    manifest = []
+    clean = load_resume()
+    manifest = [{'slug': s, 'images': imgs} for s, imgs in clean.items()]
+    todo = [p for p in products if p['slug'] not in clean]
     stats = {'ok': 0, 'person': 0, 'no_images': 0}
     done = 0
-    lock = threading.Lock()
+    log(f"старт: всего {len(products)}, готово с прошлого запуска {len(clean)}, к обработке {len(todo)}")
 
+    lock = threading.Lock()
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        futures = {pool.submit(process_product, p): p['slug'] for p in products}
+        futures = {pool.submit(process_product, p): p['slug'] for p in todo}
         for fut in as_completed(futures):
             slug = futures[fut]
             try:
@@ -165,13 +186,12 @@ def main():
                 stats[status] += 1
                 if status == 'ok':
                     manifest.append({'slug': slug, 'images': images})
-                if done % 50 == 0 or done == len(products):
-                    log(f"{done}/{len(products)} • чисто {stats['ok']} • с человеком {stats['person']} • без фото {stats['no_images']}")
+                if done % 50 == 0:
+                    log(f"{done}/{len(todo)} • чисто {stats['ok']} • с человеком {stats['person']} • без фото {stats['no_images']}")
+                    save_manifest(manifest, len(products))
 
-    manifest.sort(key=lambda p: p['slug'])
-    json.dump({'generatedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'products': manifest},
-              open(MANIFEST_PATH, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    log(f"ГОТОВО: чисто {stats['ok']} / {len(products)} • брак(человек) {stats['person']} • без фото {stats['no_images']} • манифест {MANIFEST_PATH}")
+    save_manifest(manifest, len(products))
+    log(f"ГОТОВО: чисто {stats['ok']} (+{len(clean)} ранее) / {len(products)} • брак(человек) {stats['person']} • без фото {stats['no_images']}")
 
 
 if __name__ == '__main__':
