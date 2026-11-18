@@ -91,7 +91,7 @@ export const ORDER_STATUSES = [
   { value: 'canceled', name: 'Отменён', tone: '#ef4444' },
 ]
 
-export const PRICE_LIMITS = { min: 0, max: 500 }
+export const PRICE_LIMITS = { min: 0, max: 1600 }
 
 // Размер страницы списков (витрина и админка): подгрузка по скроллу по 25 записей
 export const PAGE_SIZE = 25
