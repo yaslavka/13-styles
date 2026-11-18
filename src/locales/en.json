@@ -262,5 +262,12 @@
   "catalog.showResults": "Show results",
   "catalog.categories": "Categories",
   "category.subcategories": "Subcategories",
-  "category.allSubcategories": "All subcategories"
+  "category.allSubcategories": "All subcategories",
+  "catalog.search": "Search",
+  "catalog.badges": "Badges",
+  "catalog.rating": "Min rating",
+  "catalog.ratingAny": "Any",
+  "catalog.priceMin": "Min price",
+  "catalog.priceMax": "Max price",
+  "catalog.sizeShoes": "Shoes"
 }

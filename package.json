@@ -3,7 +3,7 @@
   "version": "0.2.1",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000 2>&1 | tee dev.log",
+    "dev": "node scripts/orchestrate.mjs",
     "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
@@ -11,6 +11,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
+    "db:dump": "node scripts/make-dump.mjs",
+    "db:restore": "node scripts/restore-dump.mjs",
+    "images:sync": "node scripts/fetch-catalog-images.mjs",
     "chat:dev": "cd mini-services/chat-service && bun run dev",
     "images:gen": "bun scripts/generate-images.js",
     "locales:gen": "bun scripts/generate-locales.js",

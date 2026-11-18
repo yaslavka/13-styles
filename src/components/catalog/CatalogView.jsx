@@ -2,42 +2,55 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { RotateCcw } from 'lucide-react'
+import { ChevronDown, RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import useShop from '@/store/useShop'
 import useDebounce from '@/hooks/useDebounce'
 import useInfiniteList from '@/hooks/useInfiniteList'
 import useT from '@/hooks/useT'
 import API from '@/lib/api'
-import { SORT_OPTIONS, GENDERS, CLOTHING_SIZES, SHOE_SIZES, PRICE_LIMITS, PAGE_SIZE } from '@/lib/constants'
+import { SORT_OPTIONS, GENDERS, CLOTHING_SIZES, SHOE_SIZES, PRICE_LIMITS } from '@/lib/constants'
 import ProductGrid from '@/components/product/ProductGrid'
 import Reveal from '@/components/motion/Reveal'
 import { ProductGridSkeleton } from '@/components/ui/card-skeleton'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 
-// Каталог: сохраняемые фильтры, сортировка, бесконечная подгрузка карточек по скроллу.
-// Категории/подкатегории — отдельные SEO-страницы (/catalog/category/[slug]...),
-// остальные параметры (цена, размеры, лейблы, пол, скидка, поиск) — через /api/products.
+// Каталог 13 STYLES: фильтры по ВСЕМ параметрам — липкий сайдбар слева на десктопе
+// и боттомщит (Drawer, side=bottom) на мобильных. Категории/подкатегории — ссылки на
+// SEO-страницы (/catalog/category/[slug]...), остальные параметры (поиск, пол, цена,
+// размеры, бейджи, скидка, рейтинг, сортировка) работают через /api/products и живут
+// в persist-сторе useShop. Фильтры применяются мгновенно, кнопка Apply просто закрывает щит.
 
-const ALL_SIZES = [...CLOTHING_SIZES, ...SHOE_SIZES]
 const LABEL_FILTERS = ['new', 'hit', 'sale']
+const RATING_OPTIONS = [0, 4.5, 4.8]
+
+const CHIP_ACTIVE = 'glass-btn glass-btn-primary text-white'
+const CHIP_ACTIVE_ORANGE = 'glass-btn glass-btn-orange text-white'
+const CHIP_GHOST = 'glass-btn glass-btn-ghost text-purple-200'
+
+// Заголовок секции фильтров: маленький, верхний регистр, жирный
+const SectionTitle = ({ children }) => (
+  <h3 className="mb-2.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-purple-200">{children}</h3>
+)
 
 const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null }) => {
   const filters = useShop((state) => state.filters)
   const setFilter = useShop((state) => state.setFilter)
   const resetFilters = useShop((state) => state.resetFilters)
   const navigate = useShop((state) => state.navigate)
-  const href = useShop((state) => state.href)
   const searchParams = useSearchParams()
   const t = useT()
 
   const urlSearch = searchParams.get('search') || ''
   const [searchInput, setSearchInput] = useState(urlSearch)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const debouncedSearch = useDebounce(searchInput, 400)
 
-  // Подхват поисковой фразы при внешней навигации (шапка/подвал)
+  // Подхват поисковой фразы при внешней навигации (шапка/подвал) —
+  // синхронизация правкой состояния прямо в рендере (паттерн React docs)
   const [lastUrlSearch, setLastUrlSearch] = useState(urlSearch)
   if (lastUrlSearch !== urlSearch) {
     setLastUrlSearch(urlSearch)
@@ -45,8 +58,10 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
   }
 
   useEffect(() => {
-    if (debouncedSearch !== filters.search) setFilter({ search: debouncedSearch })
-  }, [debouncedSearch])
+    // Читаем актуальный стор через getState(): депсы только по debouncedSearch,
+    // чтобы сброс фильтров не перезаписывал поисковую фразу обратно
+    if (debouncedSearch !== useShop.getState().filters.search) setFilter({ search: debouncedSearch })
+  }, [debouncedSearch, setFilter])
 
   const buildUrl = useCallback(
     (offset, pageSize) => {
@@ -62,6 +77,7 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
       if (filters.max < PRICE_LIMITS.max) params.set('max', String(filters.max))
       if (filters.sizes?.length) params.set('sizes', filters.sizes.join(','))
       if (filters.discount) params.set('discount', '1')
+      if ((filters.rating || 0) > 0) params.set('rating', String(filters.rating))
       params.set('offset', String(offset))
       params.set('limit', String(pageSize))
       return `/api/products?${params.toString()}`
@@ -85,6 +101,18 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
     [categories, lockedCategory, filters.category]
   )
 
+  const activeRating = filters.rating || 0
+
+  // Счётчик активных фильтров (бейдж на плавающей кнопке и в шапке щита)
+  const activeCount =
+    (filters.sizes?.length || 0) +
+    (filters.gender && filters.gender !== 'all' ? 1 : 0) +
+    (filters.label && filters.label !== 'all' ? 1 : 0) +
+    (filters.discount ? 1 : 0) +
+    (activeRating > 0 ? 1 : 0) +
+    (filters.min > PRICE_LIMITS.min || filters.max < PRICE_LIMITS.max ? 1 : 0) +
+    (searchInput || filters.search ? 1 : 0)
+
   const heading = activeCategory ? activeCategory.name : t('catalog.title')
   const subHeading = activeCategory ? activeCategory.subtitle : t('catalog.itemsShort')
 
@@ -93,63 +121,26 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
     setSearchInput('')
   }
 
-  const chip = (active) =>
-    `rounded-full px-4 py-2 font-display text-sm font-bold transition-all ${
-      active ? 'glass-btn glass-btn-primary text-white' : 'glass-btn glass-btn-ghost text-purple-200'
+  const chipClass = (active, tone = 'primary') =>
+    `rounded-full px-3.5 py-2 font-display text-xs font-bold transition-all ${
+      active ? (tone === 'orange' ? CHIP_ACTIVE_ORANGE : CHIP_ACTIVE) : CHIP_GHOST
     }`
 
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <Reveal className="mb-7">
-        <h1 className="font-display text-4xl font-extrabold text-white sm:text-5xl">{heading}</h1>
-        <p className="mt-2 text-base font-semibold text-muted-foreground">
-          {total > 0 ? t('catalog.items', { total }) : subHeading}
-        </p>
-      </Reveal>
+  // Единый набор секций фильтров: рендерится в сайдбаре (десктоп) и в боттомщите (мобильные).
+  // withSort добавляет секцию сортировки внутрь мобильного щита (на десктопе сортировка живёт в тулбаре над сеткой).
+  const renderFilters = ({ withSort = false } = {}) => {
+    const groupsWithSubs = categories.filter((category) => category.subcategories?.length)
 
-      {/* Категории и подкатегории — ссылки на SEO-страницы */}
-      <Reveal className="glass-panel mb-8 p-5">
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Categories">
-          <button type="button" onClick={() => navigate('catalog')} className={chip(!lockedCategory)}>
-            {t('catalog.all')}
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => navigate('category', { slug: category.slug })}
-              className={chip(lockedCategory === category.slug)}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
-
-        {lockedCategory && activeCategory?.subcategories?.length ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Subcategories">
-            <button type="button" onClick={() => navigate('category', { slug: lockedCategory })} className={chip(!lockedSub)}>
-              {t('catalog.all')}
-            </button>
-            {activeCategory.subcategories.map((sub) => (
-              <button
-                key={sub.id}
-                type="button"
-                onClick={() => navigate('subcategory', { slug: lockedCategory, sub: sub.slug })}
-                className={`rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all ${
-                  lockedSub === sub.slug ? 'glass-btn glass-btn-orange text-white' : 'glass-btn glass-btn-ghost text-purple-200'
-                }`}
-              >
-                {sub.name}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="flex items-center gap-2 text-xs font-bold text-purple-200">
-            {t('catalog.sort')}
+    return (
+      <div className="space-y-5">
+        {withSort ? (
+          <section aria-label={t('catalog.sort')}>
+            <SectionTitle>{t('catalog.sort')}</SectionTitle>
             <Select value={filters.sort} onValueChange={(value) => setFilter({ sort: value })}>
-              <SelectTrigger className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold" aria-label={t('catalog.sort')}>
+              <SelectTrigger
+                className="h-10 w-full rounded-full border-white/20 bg-white/5 text-sm font-semibold"
+                aria-label={t('catalog.sort')}
+              >
                 <SelectValue placeholder={t('sort.new')} />
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-white/15 bg-[#181335]/95 backdrop-blur-xl">
@@ -160,46 +151,217 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
                 ))}
               </SelectContent>
             </Select>
-          </label>
+          </section>
+        ) : null}
 
-          <label className="flex items-center gap-2 text-xs font-bold text-purple-200">
-            {t('catalog.gender')}
-            <Select value={filters.gender} onValueChange={(value) => setFilter({ gender: value })}>
-              <SelectTrigger className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold" aria-label={t('catalog.gender')}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-white/15 bg-[#181335]/95 backdrop-blur-xl">
-                {GENDERS.map((gender) => (
-                  <SelectItem key={gender.value} value={gender.value} className="rounded-xl font-semibold">
-                    {t(gender.key)}
-                  </SelectItem>
+        {/* Поиск */}
+        <section aria-label={t('catalog.search')}>
+          <SectionTitle>{t('catalog.search')}</SectionTitle>
+          <Input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder={t('catalog.searchPlaceholder')}
+            className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold"
+            aria-label={t('header.search')}
+          />
+        </section>
+
+        {/* Категории — ссылки на SEO-страницы */}
+        <section aria-label={t('catalog.categories')}>
+          <SectionTitle>{t('catalog.categories')}</SectionTitle>
+          <div role="group" aria-label={t('catalog.categories')} className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('catalog')}
+              aria-pressed={!lockedCategory}
+              className={chipClass(!lockedCategory)}
+            >
+              {t('catalog.all')}
+            </button>
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => navigate('category', { slug: category.slug })}
+                aria-pressed={lockedCategory === category.slug}
+                className={chipClass(lockedCategory === category.slug)}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Подкатегории: на залоченной странице — чипы, на /catalog — раскрывающийся список по категориям */}
+        {lockedCategory ? (
+          <section aria-label={t('catalog.subcategories')}>
+            <SectionTitle>{t('catalog.subcategories')}</SectionTitle>
+            <div role="group" aria-label={t('catalog.subcategories')} className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('category', { slug: lockedCategory })}
+                aria-pressed={!lockedSub}
+                className={chipClass(!lockedSub, 'orange')}
+              >
+                {t('category.allSubcategories')}
+              </button>
+              {(activeCategory?.subcategories || []).map((sub) => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => navigate('subcategory', { slug: lockedCategory, sub: sub.slug })}
+                  aria-pressed={lockedSub === sub.slug}
+                  className={chipClass(lockedSub === sub.slug, 'orange')}
+                >
+                  {sub.name}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : groupsWithSubs.length ? (
+          <section aria-label={t('catalog.subcategories')}>
+            <details className="group rounded-2xl border border-white/10 bg-white/5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-purple-200 transition-colors hover:text-white [&::-webkit-details-marker]:hidden">
+                {t('catalog.subcategories')}
+                <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+              </summary>
+              <div className="scrollbar-glass max-h-64 space-y-3 overflow-y-auto px-4 pb-4 pt-1">
+                {groupsWithSubs.map((category) => (
+                  <div key={category.id}>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-purple-300/80">{category.name}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {category.subcategories.map((sub) => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => navigate('subcategory', { slug: category.slug, sub: sub.slug })}
+                          className="glass-btn glass-btn-ghost rounded-full px-3 py-1.5 font-display text-xs font-bold text-purple-200"
+                        >
+                          {sub.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </label>
+              </div>
+            </details>
+          </section>
+        ) : null}
 
-          <label className="flex items-center gap-2 text-xs font-bold text-purple-200">
-            {t('catalog.price')}
+        {/* Пол */}
+        <section aria-label={t('catalog.gender')}>
+          <SectionTitle>{t('catalog.gender')}</SectionTitle>
+          <Select value={filters.gender} onValueChange={(value) => setFilter({ gender: value })}>
+            <SelectTrigger
+              className="h-10 w-full rounded-full border-white/20 bg-white/5 text-sm font-semibold"
+              aria-label={t('catalog.gender')}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl border-white/15 bg-[#181335]/95 backdrop-blur-xl">
+              {GENDERS.map((gender) => (
+                <SelectItem key={gender.value} value={gender.value} className="rounded-xl font-semibold">
+                  {t(gender.key)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </section>
+
+        {/* Цена: мин/макс с ограничением PRICE_LIMITS */}
+        <section aria-label={t('catalog.price')}>
+          <SectionTitle>{t('catalog.price')}</SectionTitle>
+          <div className="flex items-center gap-2">
             <Input
               type="number"
-              min={0}
+              min={PRICE_LIMITS.min}
+              max={PRICE_LIMITS.max}
               value={filters.min}
-              onChange={(event) => setFilter({ min: Math.max(0, Number(event.target.value) || 0) })}
+              onChange={(event) => {
+                const parsed = Number(event.target.value)
+                const safe = Number.isFinite(parsed) ? parsed : PRICE_LIMITS.min
+                setFilter({ min: Math.min(Math.max(PRICE_LIMITS.min, safe), PRICE_LIMITS.max) })
+              }}
               className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold"
-              aria-label="Min price"
+              aria-label={t('catalog.priceMin')}
             />
-            <span className="text-purple-400">—</span>
+            <span className="text-purple-400" aria-hidden>
+              —
+            </span>
             <Input
               type="number"
-              min={0}
+              min={PRICE_LIMITS.min}
+              max={PRICE_LIMITS.max}
               value={filters.max}
-              onChange={(event) => setFilter({ max: Number(event.target.value) || PRICE_LIMITS.max })}
+              onChange={(event) => {
+                const raw = event.target.value
+                const parsed = Number(raw)
+                const safe = raw === '' || !Number.isFinite(parsed) ? PRICE_LIMITS.max : parsed
+                setFilter({ max: Math.min(PRICE_LIMITS.max, Math.max(PRICE_LIMITS.min, safe)) })
+              }}
               className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold"
-              aria-label="Max price"
+              aria-label={t('catalog.priceMax')}
             />
-          </label>
+          </div>
+        </section>
 
-          <div className="flex items-center justify-between gap-3 rounded-full border border-white/20 bg-white/5 px-4 py-1.5">
+        {/* Размеры: одежда + обувь */}
+        <section aria-label={t('catalog.sizes')}>
+          <SectionTitle>{t('catalog.sizes')}</SectionTitle>
+          <div role="group" aria-label={t('catalog.sizes')} className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {CLOTHING_SIZES.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => toggleSize(size)}
+                  aria-pressed={filters.sizes.includes(size)}
+                  className={chipClass(filters.sizes.includes(size), 'orange')}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300/70">
+                {t('catalog.sizeShoes')}
+              </span>
+              {SHOE_SIZES.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => toggleSize(size)}
+                  aria-pressed={filters.sizes.includes(size)}
+                  className={chipClass(filters.sizes.includes(size), 'orange')}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Бейджи NEW / TOP / SALE (повторный клик снимает выбор) */}
+        <section aria-label={t('catalog.badges')}>
+          <SectionTitle>{t('catalog.badges')}</SectionTitle>
+          <div role="group" aria-label={t('catalog.badges')} className="flex flex-wrap gap-2">
+            {LABEL_FILTERS.map((label) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setFilter({ label: filters.label === label ? 'all' : label })}
+                aria-pressed={filters.label === label}
+                className={chipClass(filters.label === label, 'orange')}
+              >
+                {label.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Только со скидкой */}
+        <section aria-label={t('catalog.discountOnly')}>
+          <div className="flex items-center justify-between rounded-full border border-white/15 bg-white/5 px-4 py-2">
             <span className="text-xs font-bold text-purple-200">{t('catalog.discountOnly')}</span>
             <Switch
               checked={filters.discount}
@@ -207,88 +369,175 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
               aria-label={t('catalog.discountOnly')}
             />
           </div>
-        </div>
+        </section>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Badges">
-          <span className="text-xs font-bold text-purple-200">NEW / TOP / SALE</span>
-          {LABEL_FILTERS.map((label) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => setFilter({ label: filters.label === label ? 'all' : label })}
-              aria-pressed={filters.label === label}
-              className={`rounded-full px-3 py-1.5 font-display text-xs font-bold uppercase transition-all ${
-                filters.label === label ? 'glass-btn glass-btn-orange text-white' : 'glass-btn glass-btn-ghost text-purple-200'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* Минимальный рейтинг */}
+        <section aria-label={t('catalog.rating')}>
+          <SectionTitle>{t('catalog.rating')}</SectionTitle>
+          <div role="group" aria-label={t('catalog.rating')} className="flex flex-wrap gap-2">
+            {RATING_OPTIONS.map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setFilter({ rating: value })}
+                aria-pressed={activeRating === value}
+                className={chipClass(activeRating === value, 'orange')}
+              >
+                {value === 0 ? t('catalog.ratingAny') : `${value}+`}
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
+  }
 
-        <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Sizes">
-          <span className="text-xs font-bold text-purple-200">{t('catalog.sizes')}</span>
-          {ALL_SIZES.map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => toggleSize(size)}
-              aria-pressed={filters.sizes.includes(size)}
-              className={`rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all ${
-                filters.sizes.includes(size)
-                  ? 'glass-btn glass-btn-orange text-white'
-                  : 'glass-btn glass-btn-ghost text-purple-200'
-              }`}
-            >
-              {size}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={resetAll}
-            className="ml-auto flex items-center gap-1.5 text-xs font-bold text-muted-foreground transition-colors hover:text-orange-300"
-          >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden /> {t('catalog.resetAll')}
-          </button>
-        </div>
+  return (
+    <div className="mx-auto max-w-7xl px-4 pb-28 pt-10 sm:px-6 lg:pb-16">
+      <Reveal className="mb-7">
+        <h1 className="font-display text-4xl font-extrabold text-white sm:text-5xl">{heading}</h1>
+        <p className="mt-2 text-base font-semibold text-muted-foreground">
+          {total > 0 ? t('catalog.items', { total }) : subHeading}
+        </p>
       </Reveal>
 
-      <div className="mb-6">
-        <Input
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder={t('catalog.searchPlaceholder')}
-          className="h-12 max-w-lg rounded-full border-white/20 bg-white/5 font-semibold"
-          aria-label={t('header.search')}
-        />
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+        {/* САЙДБАР ФИЛЬТРОВ (десктоп): липкий, с внутренним скроллом */}
+        <aside className="hidden w-80 shrink-0 self-start lg:sticky lg:top-[96px] lg:block" aria-label={t('catalog.filters')}>
+          <div className="glass-panel scrollbar-glass max-h-[calc(100vh-7.5rem)] overflow-y-auto p-5">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.2em] text-white">
+                <SlidersHorizontal className="h-4 w-4 text-orange-300" aria-hidden />
+                {t('catalog.filters')}
+              </h2>
+              <button
+                type="button"
+                onClick={resetAll}
+                className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground transition-colors hover:text-orange-300"
+              >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                {t('catalog.resetAll')}
+              </button>
+            </div>
+            {renderFilters()}
+          </div>
+        </aside>
+
+        {/* Товары: тулбар (счётчик + сортировка) над сеткой на всех экранах */}
+        <section className="min-w-0 flex-1" aria-label={heading}>
+          <Reveal className="glass-panel mb-6 flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+            <p className="min-h-5 text-sm font-semibold text-muted-foreground" aria-live="polite">
+              {total > 0 ? t('catalog.items', { total }) : ''}
+            </p>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="hidden text-[11px] font-bold uppercase tracking-widest text-purple-200 sm:inline">
+                {t('catalog.sort')}
+              </span>
+              <Select value={filters.sort} onValueChange={(value) => setFilter({ sort: value })}>
+                <SelectTrigger
+                  className="h-9 rounded-full border-white/20 bg-white/5 text-xs font-semibold"
+                  aria-label={t('catalog.sort')}
+                >
+                  <SelectValue placeholder={t('sort.new')} />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-white/15 bg-[#181335]/95 backdrop-blur-xl">
+                  {SORT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value} className="rounded-xl font-semibold">
+                      {t(option.key)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </Reveal>
+
+          {loading ? (
+            <ProductGridSkeleton count={8} />
+          ) : (
+            <>
+              {items.length === 0 ? (
+                <div className="glass-panel mx-auto max-w-xl p-10 text-center">
+                  <p className="font-display text-xl font-bold text-white">{t('catalog.emptyTitle')}</p>
+                  <p className="mt-2 text-sm font-semibold text-muted-foreground">{t('catalog.emptyText')}</p>
+                </div>
+              ) : (
+                <ProductGrid products={items} />
+              )}
+
+              {/* Маркер бесконечной подгрузки */}
+              <div ref={sentinelRef} className="h-2" aria-hidden />
+
+              {/* Скелеты следующей партии карточек */}
+              {loadingMore ? <ProductGridSkeleton count={4} /> : null}
+
+              <div className="mt-6 flex min-h-10 items-center justify-center" aria-live="polite">
+                {!loadingMore && !hasMore && items.length > 0 ? (
+                  <span className="font-display text-sm font-bold text-purple-300">{t('catalog.loadedAll')}</span>
+                ) : null}
+              </div>
+            </>
+          )}
+        </section>
       </div>
 
-      {loading ? (
-        <ProductGridSkeleton count={8} />
-      ) : (
-        <>
-          {items.length === 0 ? (
-            <div className="glass-panel mx-auto max-w-xl p-10 text-center">
-              <p className="font-display text-xl font-bold text-white">{t('catalog.emptyTitle')}</p>
-              <p className="mt-2 text-sm font-semibold text-muted-foreground">{t('catalog.emptyText')}</p>
-            </div>
-          ) : (
-            <ProductGrid products={items} />
-          )}
+      {/* Плавающая кнопка фильтров (мобильные) с бейджем активных фильтров */}
+      <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          aria-label={`${t('catalog.filters')}${activeCount > 0 ? ` (${activeCount})` : ''}`}
+          className="glass-btn glass-btn-orange flex items-center gap-2 rounded-full px-6 py-3 font-display text-sm font-bold text-white shadow-[0_12px_30px_rgba(249,115,22,0.45)]"
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden />
+          {t('catalog.filters')}
+          {activeCount > 0 ? (
+            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-white px-1.5 text-xs font-extrabold text-orange-500">
+              {activeCount}
+            </span>
+          ) : null}
+        </button>
+      </div>
 
-          {/* Маркер бесконечной подгрузки */}
-          <div ref={sentinelRef} className="h-2" aria-hidden />
+      {/* БОТТОМЩИТ ФИЛЬТРОВ (мобильные): скролл-контент + липкий футер с Apply / Clear all */}
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DrawerContent className="max-h-[85vh] rounded-t-[1.6rem] border-white/15 bg-[#150f2e]/95 backdrop-blur-2xl">
+          <DrawerHeader className="shrink-0 border-b border-white/10 pb-3">
+            <DrawerTitle className="flex items-center justify-center gap-2 font-display text-sm font-bold uppercase tracking-[0.2em] text-white">
+              <SlidersHorizontal className="h-4 w-4 text-orange-300" aria-hidden />
+              {t('catalog.filters')}
+              {activeCount > 0 ? (
+                <span className="grid h-6 min-w-6 place-items-center rounded-full bg-orange-500/90 px-1.5 text-xs font-extrabold text-white">
+                  {activeCount}
+                </span>
+              ) : null}
+            </DrawerTitle>
+            <DrawerDescription className="sr-only">{t('catalog.filters')}</DrawerDescription>
+          </DrawerHeader>
 
-          {/* Скелеты следующей партии карточек */}
-          {loadingMore ? <ProductGridSkeleton count={4} /> : null}
+          <div className="scrollbar-glass min-h-0 flex-1 overflow-y-auto px-4 py-5">{renderFilters({ withSort: true })}</div>
 
-          <div className="mt-6 flex min-h-10 items-center justify-center" aria-live="polite">
-            {!loadingMore && !hasMore && items.length > 0 ? (
-              <span className="font-display text-sm font-bold text-purple-300">{t('catalog.loadedAll')}</span>
-            ) : null}
-          </div>
-        </>
-      )}
+          <DrawerFooter className="shrink-0 flex-row gap-3 border-t border-white/10 bg-[#150f2e]/95 px-4 py-4">
+            <button
+              type="button"
+              onClick={() => {
+                resetAll()
+                setDrawerOpen(false)
+              }}
+              className="glass-btn glass-btn-ghost flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full font-display text-sm font-bold text-purple-200"
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              {t('catalog.clearFilters')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              className="glass-btn glass-btn-primary flex h-11 flex-1 items-center justify-center rounded-full font-display text-sm font-bold text-white"
+            >
+              {t('catalog.showResults')}
+            </button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }

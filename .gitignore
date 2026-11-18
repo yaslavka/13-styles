@@ -52,5 +52,11 @@ prompt
 server.log
 # Skills directory
 /skills/
-# HF dataset working data
-/data
+# HF dataset working data (но план и манифест нужны для оркестра — коммитим)
+/data/*
+!/data/import-plan.json
+!/data/catalog-manifest.json
+/db/custom.db
+/db/custom.db-journal
+/db/custom.db-wal
+/db/custom.db-shm
