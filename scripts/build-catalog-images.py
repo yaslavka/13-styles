@@ -41,39 +41,27 @@ def log(msg):
 
 
 def get_detectors():
-    # Каскады и HOG грузим один раз на поток
-    if not hasattr(_tl, 'ready'):
-        base = cv2.data.haarcascades
-        _tl.face = cv2.CascadeClassifier(base + 'haarcascade_frontalface_default.xml')
-        _tl.profile = cv2.CascadeClassifier(base + 'haarcascade_profileface.xml')
-        _tl.upper = cv2.CascadeClassifier(base + 'haarcascade_upperbody.xml')
-        _tl.full = cv2.CascadeClassifier(base + 'haarcascade_fullbody.xml')
-        _tl.hog = cv2.HOGDescriptor()
-        _tl.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-        _tl.ready = True
+    if not hasattr(_tl, 'net'):
+        _tl.net = cv2.dnn.readNetFromCaffe(
+            os.path.join(ROOT, 'data', 'mobilenet-ssd.prototxt'),
+            os.path.join(ROOT, 'data', 'mobilenet-ssd.caffemodel'))
+        _tl.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+        _tl.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
 
 def has_person(pil_img):
-    """True — на фото обнаружен человек или часть человека."""
-    get_detectors()  # в отдельном процессе загрузится один раз
+    """True — на фото обнаружен человек (MobileNet-SSD, класс person, conf>0.35)."""
+    get_detectors()
     scale = 480.0 / max(pil_img.size)
     small = pil_img if scale >= 1 else pil_img.resize(
         (max(1, int(pil_img.width * scale)), max(1, int(pil_img.height * scale))), Image.BILINEAR)
-    gray = cv2.cvtColor(np.array(small.convert('RGB')), cv2.COLOR_RGB2GRAY)
-    gray = cv2.equalizeHist(gray)
-    for cascade, nb in ((_tl.face, 5), (_tl.upper, 4), (_tl.full, 4)):
-        if len(cascade.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=nb, minSize=(36, 36))):
+    img = cv2.cvtColor(np.array(small.convert('RGB')), cv2.COLOR_RGB2BGR)
+    blob = cv2.dnn.blobFromImage(img, 0.007843, (300, 300), 127.5)
+    _tl.net.setInput(blob)
+    out = _tl.net.forward()
+    for i in range(out.shape[2]):
+        if int(out[0, 0, i, 1]) == 15 and float(out[0, 0, i, 2]) > 0.35:
             return True
-    if len(_tl.profile.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=5, minSize=(36, 36))):
-        return True
-    if len(_tl.profile.detectMultiScale(cv2.flip(gray, 1), scaleFactor=1.08, minNeighbors=5, minSize=(36, 36))):
-        return True
-    try:
-        rects, _ = _tl.hog.detectMultiScale(gray, winStride=(8, 8), padding=(4, 4), scale=1.05)
-        if len(rects):
-            return True
-    except cv2.error:
-        pass
     return False
 
 
@@ -135,6 +123,23 @@ def process_product(product):
     return slug, 'ok', images
 
 
+def recheck_product(task):
+    """Перепроверка уже сохранённых чистых товаров новым детектором.
+    Возвращает (slug, person_found)."""
+    slug, files = task
+    found = False
+    for rel in files:
+        path = os.path.join(ROOT, 'public' + rel)
+        try:
+            img = Image.open(path).convert('RGB')
+        except Exception:
+            continue
+        if has_person(img):
+            found = True
+            break
+    return slug, found
+
+
 def load_resume():
     """Файлы {slug}-{n}.webp на диске = уже чистые товары прошлых запусков."""
     by_slug = {}
@@ -162,7 +167,6 @@ def main():
     plan = json.load(open(PLAN_PATH, encoding='utf-8'))
     products = plan['products']
     clean = load_resume()
-    manifest = [{'slug': s, 'images': imgs} for s, imgs in clean.items()]
     rejected = set()
     if os.path.exists(MANIFEST_PATH):
         try:
@@ -173,6 +177,25 @@ def main():
     stats = {'ok': 0, 'person': 0, 'no_images': 0}
     done = 0
     log(f"старт: всего {len(products)}, чисто на диске {len(clean)}, брак ранее {len(rejected)}, к обработке {len(todo)}")
+
+    # Перепроверка чистых товаров актуальным детектором: брак удаляем с диска
+    recheck_tasks = [(s, imgs) for s, imgs in clean.items() if s not in rejected]
+    recheck_found = 0
+    if recheck_tasks:
+        log(f"перепроверка {len(recheck_tasks)} чистых товаров детектором SSD...")
+        with ProcessPoolExecutor(max_workers=WORKERS) as pool:
+            for slug, found in pool.map(recheck_product, recheck_tasks, chunksize=4):
+                if found:
+                    recheck_found += 1
+                    for rel in clean[slug]:
+                        try:
+                            os.remove(os.path.join(ROOT, 'public' + rel))
+                        except OSError:
+                            pass
+                    clean.pop(slug, None)
+                    rejected.add(slug)
+        log(f"перепроверка: убрано товаров с человеком: {recheck_found}, чисто осталось: {len(clean)}")
+    manifest = [{'slug': s, 'images': imgs} for s, imgs in clean.items()]
 
     lock = threading.Lock()
     with ProcessPoolExecutor(max_workers=WORKERS) as pool:

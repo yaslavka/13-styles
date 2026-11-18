@@ -20,7 +20,7 @@ const main = async () => {
 
   // 1) Скрываем старые обычные товары (decor остаются как есть)
   const hidden = await db.product.updateMany({
-    where: { decor: false, NOT: { images: { startsWith: '/products/catalog/' } } },
+    where: { decor: false, NOT: { images: { contains: '"/products/catalog/' } } },
     data: { published: false },
   })
   console.log(`[import] скрыто старых товаров: ${hidden.count}`)
@@ -46,7 +46,7 @@ const main = async () => {
   // 4) Удаляем каталожные товары, которых больше нет в манифесте
   const manifestSlugs = new Set(manifest.products.map((p) => p.slug))
   const stale = await db.product.findMany({
-    where: { images: { startsWith: '/products/catalog/' } },
+    where: { images: { contains: '"/products/catalog/' } },
     select: { id: true, slug: true },
   })
   let deleted = 0
