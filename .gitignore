@@ -60,3 +60,9 @@ server.log
 /db/custom.db-journal
 /db/custom.db-wal
 /db/custom.db-shm
+
+# Мусор песочницы и временные файлы
+--viewport
+/.tmp/
+/download/
+/upload/

@@ -1,12 +1,13 @@
-// ПОЛНЫЙ ОРКЕСТР 13 STYLES — одна команда `npm run dev`:
-//   1. Готовит .env (DATABASE_URL, админ, секреты) — если его нет
+// ПОЛНЫЙ ОРКЕСТР 13 STYLES — одна команда `npm run dev` (работает и на Windows, и на Linux/macOS):
+//   1. Готовит .env (DATABASE_URL, админ, секреты) — если его нет; на Windows путь к БД
+//      нормализуется в прямые слэши (Prisma не понимает обратные слэши в file:-URL)
 //   2. prisma generate — если клиент не сгенерирован
 //   3. Восстанавливает БД из дампа db/seed/custom.db — если база пустая/отсутствует
 //   4. Досинхронизирует картинки каталога в фоне — если файлов не хватает
 //   5. Ставит зависимости чат-микросервиса (если нужно) и запускает его на :3003
 //   6. Запускает Next.js dev-сервер на :3000
 // Админ-панель создаётся автоматически: логин/пароль из .env (по умолчанию admin / 13styles2024).
-// Запуск: node scripts/orchestrate.mjs
+// Запуск: node scripts/orchestrate.mjs (или npm run dev)
 
 import fs from 'node:fs'
 import net from 'node:net'
@@ -25,6 +26,8 @@ const children = []
 let shuttingDown = false
 
 const log = (msg) => console.log(`[orchestrate] ${msg}`)
+
+const IS_WINDOWS = process.platform === 'win32'
 
 // node или bun: предпочитаем node (Next.js под ним стабильнее)
 const runtimeBin = () => {
@@ -54,6 +57,10 @@ const readEnvFile = () => {
   return env
 }
 
+// DATABASE_URL для Prisma/SQLite: только прямые слэши — обратные слэши Windows
+// в file:-URL ломают парсер Prisma («Unable to open the database file»)
+const toDbUrl = (dbPath) => `file:${dbPath.replace(/\\/g, '/')}`
+
 const ensureEnv = () => {
   let env = readEnvFile()
   const needed = []
@@ -61,7 +68,13 @@ const ensureEnv = () => {
     env[key] = value
     needed.push(`${key}=${key === 'ADMIN_PASSWORD' || key === 'USER_AUTH_SECRET' ? '***' : value}`)
   }
-  if (!env.DATABASE_URL) write('DATABASE_URL', `file:${DB_PATH}`)
+  if (!env.DATABASE_URL) {
+    write('DATABASE_URL', toDbUrl(DB_PATH))
+  } else if (env.DATABASE_URL.includes('\\')) {
+    // Починка уже существующего .env с обратными слэшами (после первого запуска на Windows)
+    env.DATABASE_URL = env.DATABASE_URL.replace(/\\/g, '/')
+    needed.push(`DATABASE_URL=${env.DATABASE_URL} (исправлены обратные слэши)`)
+  }
   if (!env.NEXT_PUBLIC_SITE_URL) write('NEXT_PUBLIC_SITE_URL', 'http://localhost:3000')
   if (!env.ADMIN_LOGIN) write('ADMIN_LOGIN', 'admin')
   if (!env.ADMIN_PASSWORD) write('ADMIN_PASSWORD', '13styles2024')
@@ -84,6 +97,11 @@ const ensureEnv = () => {
 }
 
 const ensurePrismaClient = () => {
+  const nextPkg = path.join(ROOT, 'node_modules', 'next', 'package.json')
+  if (!fs.existsSync(nextPkg)) {
+    console.error('[orchestrate] Зависимости не установлены — сначала выполните: npm install')
+    process.exit(1)
+  }
   const clientDir = path.join(ROOT, 'node_modules', '.prisma', 'client')
   if (fs.existsSync(clientDir)) return
   log('prisma generate...')
@@ -107,7 +125,7 @@ const ensureImages = (env) => {
   log(`изображений ${imageCount} < ожидаемых ~5500 — фоновая досинхронизация из CDN (не блокирует запуск)`)
   const child = spawn(runtimeBin(), ['scripts/fetch-catalog-images.mjs'], {
     cwd: ROOT,
-    env: { ...process.env, DATABASE_URL: env.DATABASE_URL },
+    env: { ...process.env, DATABASE_URL: toDbUrl(DB_PATH) },
     detached: true,
     stdio: ['ignore', fs.openSync(path.join(ROOT, 'data', 'fetch-run.log'), 'a'), fs.openSync(path.join(ROOT, 'data', 'fetch-run.log'), 'a')],
   })
@@ -121,10 +139,9 @@ const ensureChatService = () => {
   }
   if (!fs.existsSync(path.join(CHAT_DIR, 'node_modules'))) {
     log('установка зависимостей чат-сервиса...')
-    const bin = runtimeBin()
-    const cmd = path.basename(bin) === 'node' ? ['npm', ['install', '--no-audit', '--no-fund']] : [bin, ['install']]
     try {
-      execSync(`${cmd[0]} ${cmd[1].join(' ')}`, { cwd: CHAT_DIR, stdio: 'inherit' })
+      // npm везде: и на Windows, и на Linux (bun не требуется)
+      execSync('npm install --no-audit --no-fund', { cwd: CHAT_DIR, stdio: 'inherit', shell: IS_WINDOWS })
     } catch (error) {
       log(`не удалось установить зависимости чат-сервиса: ${error?.message}`)
       return null
@@ -141,7 +158,7 @@ const main = async () => {
   // 3) Дамп БД, если база пустая
   const restore = spawnSync(runtimeBin(), ['scripts/restore-dump.mjs'], {
     cwd: ROOT,
-    env: { ...process.env, DATABASE_URL: env.DATABASE_URL },
+    env: { ...process.env, DATABASE_URL: toDbUrl(DB_PATH) },
     stdio: 'inherit',
   })
   if (restore.status !== 0) log('восстановление дампа завершилось с предупреждением')
@@ -167,7 +184,11 @@ const main = async () => {
     return
   }
   const nextBin = path.join(ROOT, 'node_modules', 'next', 'dist', 'bin', 'next')
-  const next = spawn(runtimeBin(), [nextBin, 'dev', '-p', '3000'], { cwd: ROOT, env: { ...process.env, ...env }, stdio: 'inherit' })
+  const next = spawn(runtimeBin(), [nextBin, 'dev', '-p', '3000'], {
+    cwd: ROOT,
+    env: { ...process.env, ...env, DATABASE_URL: toDbUrl(DB_PATH) },
+    stdio: 'inherit',
+  })
   children.push({ name: 'next-dev', proc: next })
   log(`Next.js dev-сервер запущен на http://localhost:3000`)
   log('админ-панель: /admin — логин и пароль указаны в .env')

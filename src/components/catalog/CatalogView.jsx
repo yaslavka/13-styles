@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ChevronDown, RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, ChevronRight, RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import useShop from '@/store/useShop'
 import useDebounce from '@/hooks/useDebounce'
@@ -14,7 +14,6 @@ import ProductGrid from '@/components/product/ProductGrid'
 import Reveal from '@/components/motion/Reveal'
 import { ProductGridSkeleton } from '@/components/ui/card-skeleton'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 
@@ -30,6 +29,13 @@ const RATING_OPTIONS = [0, 4.5, 4.8]
 const CHIP_ACTIVE = 'glass-btn glass-btn-primary text-white'
 const CHIP_ACTIVE_ORANGE = 'glass-btn glass-btn-orange text-white'
 const CHIP_GHOST = 'glass-btn glass-btn-ghost text-purple-200'
+
+// Кнопка фильтра «как в админке»: во всю ширину сайдбара, в столбик,
+// с сохранённым стеклянным фоном и бордером (glass-btn-ghost / primary / orange)
+const ROW_CLASS = (active, tone = 'primary') =>
+  `flex w-full items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-left font-display text-sm font-bold transition-all ${
+    active ? (tone === 'orange' ? CHIP_ACTIVE_ORANGE : CHIP_ACTIVE) : CHIP_GHOST
+  }`
 
 // Заголовок секции фильтров: маленький, верхний регистр, жирный
 const SectionTitle = ({ children }) => (
@@ -133,11 +139,6 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
     setSearchInput('')
   }
 
-  const chipClass = (active, tone = 'primary') =>
-    `rounded-full px-3.5 py-2 font-display text-xs font-bold transition-all ${
-      active ? (tone === 'orange' ? CHIP_ACTIVE_ORANGE : CHIP_ACTIVE) : CHIP_GHOST
-    }`
-
   // Единый набор секций фильтров: рендерится в сайдбаре (десктоп) и в боттомщите (мобильные).
   // withSort добавляет секцию сортировки внутрь мобильного щита (на десктопе сортировка живёт в тулбаре над сеткой).
   const renderFilters = ({ withSort = false } = {}) => {
@@ -178,16 +179,11 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
           />
         </section>
 
-        {/* Категории — ссылки на SEO-страницы */}
+        {/* Категории — ссылки на SEO-страницы, кнопки в столбик как в админке */}
         <section aria-label={t('catalog.categories')}>
           <SectionTitle>{t('catalog.categories')}</SectionTitle>
-          <div role="group" aria-label={t('catalog.categories')} className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => navigate('catalog')}
-              aria-pressed={!lockedCategory}
-              className={chipClass(!lockedCategory)}
-            >
+          <div role="group" aria-label={t('catalog.categories')} className="flex flex-col gap-1.5">
+            <button type="button" onClick={() => navigate('catalog')} aria-pressed={!lockedCategory} className={ROW_CLASS(!lockedCategory)}>
               {t('catalog.all')}
             </button>
             {categories.map((category) => (
@@ -196,24 +192,25 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
                 type="button"
                 onClick={() => navigate('category', { slug: category.slug })}
                 aria-pressed={lockedCategory === category.slug}
-                className={chipClass(lockedCategory === category.slug)}
+                className={ROW_CLASS(lockedCategory === category.slug)}
               >
                 {category.name}
+                <span className="text-xs font-semibold opacity-70">{category.count ?? ''}</span>
               </button>
             ))}
           </div>
         </section>
 
-        {/* Подкатегории: на залоченной странице — чипы, на /catalog — раскрывающийся список по категориям */}
+        {/* Подкатегории: столбик кнопок — на залоченной странице одна группа, на /catalog — раскрывающиеся группы по категориям */}
         {lockedCategory ? (
           <section aria-label={t('catalog.subcategories')}>
             <SectionTitle>{t('catalog.subcategories')}</SectionTitle>
-            <div role="group" aria-label={t('catalog.subcategories')} className="flex flex-wrap gap-2">
+            <div role="group" aria-label={t('catalog.subcategories')} className="flex flex-col gap-1.5">
               <button
                 type="button"
                 onClick={() => navigate('category', { slug: lockedCategory })}
                 aria-pressed={!lockedSub}
-                className={chipClass(!lockedSub, 'orange')}
+                className={ROW_CLASS(!lockedSub, 'orange')}
               >
                 {t('category.allSubcategories')}
               </button>
@@ -223,7 +220,7 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
                   type="button"
                   onClick={() => navigate('subcategory', { slug: lockedCategory, sub: sub.slug })}
                   aria-pressed={lockedSub === sub.slug}
-                  className={chipClass(lockedSub === sub.slug, 'orange')}
+                  className={ROW_CLASS(lockedSub === sub.slug, 'orange')}
                 >
                   {sub.name}
                 </button>
@@ -237,19 +234,20 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
                 {t('catalog.subcategories')}
                 <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
               </summary>
-              <div className="scrollbar-glass max-h-64 space-y-3 overflow-y-auto px-4 pb-4 pt-1">
+              <div className="scrollbar-glass max-h-72 space-y-4 overflow-y-auto px-3 pb-4 pt-1">
                 {groupsWithSubs.map((category) => (
                   <div key={category.id}>
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-purple-300/80">{category.name}</p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <p className="px-1.5 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-purple-300/80">{category.name}</p>
+                    <div className="flex flex-col gap-1.5">
                       {category.subcategories.map((sub) => (
                         <button
                           key={sub.id}
                           type="button"
                           onClick={() => navigate('subcategory', { slug: category.slug, sub: sub.slug })}
-                          className="glass-btn glass-btn-ghost rounded-full px-3 py-1.5 font-display text-xs font-bold text-purple-200"
+                          className="glass-btn glass-btn-ghost flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 text-left font-display text-sm font-bold text-purple-200 transition-all hover:text-white"
                         >
                           {sub.name}
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-orange-300/70" aria-hidden />
                         </button>
                       ))}
                     </div>
@@ -260,24 +258,22 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
           </section>
         ) : null}
 
-        {/* Пол */}
+        {/* Пол — кнопки в столбик как в админке */}
         <section aria-label={t('catalog.gender')}>
           <SectionTitle>{t('catalog.gender')}</SectionTitle>
-          <Select value={filters.gender} onValueChange={(value) => setFilter({ gender: value })}>
-            <SelectTrigger
-              className="h-10 w-full rounded-full border-white/20 bg-white/5 text-sm font-semibold"
-              aria-label={t('catalog.gender')}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl border-white/15 bg-[#181335]/95 backdrop-blur-xl">
-              {GENDERS.map((gender) => (
-                <SelectItem key={gender.value} value={gender.value} className="rounded-xl font-semibold">
-                  {t(gender.key)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div role="group" aria-label={t('catalog.gender')} className="flex flex-col gap-1.5">
+            {GENDERS.map((gender) => (
+              <button
+                key={gender.value}
+                type="button"
+                onClick={() => setFilter({ gender: gender.value })}
+                aria-pressed={filters.gender === gender.value}
+                className={ROW_CLASS(filters.gender === gender.value)}
+              >
+                {t(gender.key)}
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* Цена: мин/макс с ограничением PRICE_LIMITS */}
@@ -317,53 +313,55 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
           </div>
         </section>
 
-        {/* Размеры: одежда + обувь */}
+        {/* Размеры: одежда + обувь — кнопки в столбик как в админке */}
         <section aria-label={t('catalog.sizes')}>
           <SectionTitle>{t('catalog.sizes')}</SectionTitle>
-          <div role="group" aria-label={t('catalog.sizes')} className="space-y-3">
-            <div className="flex flex-wrap gap-2">
+          <div role="group" aria-label={t('catalog.sizes')} className="space-y-4">
+            <div className="flex flex-col gap-1.5">
               {CLOTHING_SIZES.map((size) => (
                 <button
                   key={size}
                   type="button"
                   onClick={() => toggleSize(size)}
                   aria-pressed={filters.sizes.includes(size)}
-                  className={chipClass(filters.sizes.includes(size), 'orange')}
+                  className={ROW_CLASS(filters.sizes.includes(size), 'orange')}
                 >
                   {size}
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300/70">
+            <div className="space-y-1.5">
+              <span className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-300/70">
                 {t('catalog.sizeShoes')}
               </span>
-              {SHOE_SIZES.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => toggleSize(size)}
-                  aria-pressed={filters.sizes.includes(size)}
-                  className={chipClass(filters.sizes.includes(size), 'orange')}
-                >
-                  {size}
-                </button>
-              ))}
+              <div className="flex flex-col gap-1.5">
+                {SHOE_SIZES.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleSize(size)}
+                    aria-pressed={filters.sizes.includes(size)}
+                    className={ROW_CLASS(filters.sizes.includes(size), 'orange')}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Бейджи NEW / TOP / SALE (повторный клик снимает выбор) */}
+        {/* Бейджи NEW / TOP / SALE — кнопки в столбик (повторный клик снимает выбор) */}
         <section aria-label={t('catalog.badges')}>
           <SectionTitle>{t('catalog.badges')}</SectionTitle>
-          <div role="group" aria-label={t('catalog.badges')} className="flex flex-wrap gap-2">
+          <div role="group" aria-label={t('catalog.badges')} className="flex flex-col gap-1.5">
             {LABEL_FILTERS.map((label) => (
               <button
                 key={label}
                 type="button"
                 onClick={() => setFilter({ label: filters.label === label ? 'all' : label })}
                 aria-pressed={filters.label === label}
-                className={chipClass(filters.label === label, 'orange')}
+                className={ROW_CLASS(filters.label === label, 'orange')}
               >
                 {label.toUpperCase()}
               </button>
@@ -371,29 +369,38 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
           </div>
         </section>
 
-        {/* Только со скидкой */}
+        {/* Только со скидкой — кнопка-переключатель во всю ширину, как в админке */}
         <section aria-label={t('catalog.discountOnly')}>
-          <div className="flex items-center justify-between rounded-full border border-white/15 bg-white/5 px-4 py-2">
-            <span className="text-xs font-bold text-purple-200">{t('catalog.discountOnly')}</span>
-            <Switch
-              checked={filters.discount}
-              onCheckedChange={(checked) => setFilter({ discount: checked })}
-              aria-label={t('catalog.discountOnly')}
-            />
-          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={filters.discount}
+            onClick={() => setFilter({ discount: !filters.discount })}
+            className={ROW_CLASS(filters.discount, 'orange')}
+          >
+            <span>{t('catalog.discountOnly')}</span>
+            <span
+              aria-hidden
+              className={`h-5 w-9 rounded-full border transition-colors ${filters.discount ? 'border-orange-300/70 bg-orange-400/80' : 'border-white/25 bg-white/10'}`}
+            >
+              <span
+                className={`block h-4 w-4 translate-y-[1px] rounded-full bg-white shadow transition-transform ${filters.discount ? 'translate-x-[17px]' : 'translate-x-[2px]'}`}
+              />
+            </span>
+          </button>
         </section>
 
-        {/* Минимальный рейтинг */}
+        {/* Минимальный рейтинг — кнопки в столбик */}
         <section aria-label={t('catalog.rating')}>
           <SectionTitle>{t('catalog.rating')}</SectionTitle>
-          <div role="group" aria-label={t('catalog.rating')} className="flex flex-wrap gap-2">
+          <div role="group" aria-label={t('catalog.rating')} className="flex flex-col gap-1.5">
             {RATING_OPTIONS.map((value) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setFilter({ rating: value })}
                 aria-pressed={activeRating === value}
-                className={chipClass(activeRating === value, 'orange')}
+                className={ROW_CLASS(activeRating === value, 'orange')}
               >
                 {value === 0 ? t('catalog.ratingAny') : `${value}+`}
               </button>
