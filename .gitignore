@@ -56,6 +56,7 @@ server.log
 /data/*
 !/data/import-plan.json
 !/data/catalog-manifest.json
+!/data/garments2look/
 /db/custom.db
 /db/custom.db-journal
 /db/custom.db-wal
@@ -71,8 +72,8 @@ server.log
 package-lock.json
 tool-results/
 
-# Фото Garments2Look (438 ГБ исходников на HF — в git не кладём, скачиваются scripts/port-garments2look.py)
-public/products/g2l/
+# Фото Garments2Look — КОММИТИМ (webp 640px): витрина работает сразу после клонирования
+# (исходники 438 ГБ на HF, для полного порта — scripts/port-garments2look.py)
 data/g2l-sync.log
 data/fetch-run.log
 db/seed/custom.db
