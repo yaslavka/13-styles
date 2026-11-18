@@ -69,3 +69,4 @@ server.log
 
 # npm lockfiles — генерируются локально (npm install), в репозиторий не попадают
 package-lock.json
+tool-results/
