@@ -117,7 +117,7 @@ const useShop = create(
       },
     }),
     {
-      name: 'pixart-shop-v2',
+      name: 'styles-shop-v2',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ filters: state.filters, locale: state.locale, accentStyle: state.accentStyle }),
       skipHydration: true,

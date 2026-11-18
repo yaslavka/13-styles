@@ -63,7 +63,7 @@ const useCart = create(
       count: () => get().items.reduce((sum, item) => sum + item.qty, 0),
     }),
     {
-      name: 'pixart-cart',
+      name: 'styles-cart',
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
     }

@@ -1,4 +1,4 @@
-// pixart-chat-service — socket.io support chat micro-service (marketplace "техподдержка").
+// 13-styles-chat-service — socket.io support chat micro-service (marketplace "техподдержка").
 // Contract: visitors connect with role 'user' into per-visitor rooms, tech support
 // connects with role 'support', watches the room list and answers inside rooms.
 

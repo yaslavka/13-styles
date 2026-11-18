@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "pixart-chat-service",
+      "name": "13-styles-chat-service",
       "dependencies": {
         "socket.io": "^4.8.1",
       },

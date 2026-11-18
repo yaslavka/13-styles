@@ -3,7 +3,7 @@
 //  - Локальная память (fallback, используется по умолчанию — без внешних зависимостей)
 
 const memory = new Map()
-const REDIS_PREFIX = 'pixart:cache:'
+const REDIS_PREFIX = 'styles:cache:'
 let redisClient = null
 let redisMode = false
 let redisAttempted = false

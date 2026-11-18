@@ -1,6 +1,6 @@
 // Клиентский API-хелпер: fetch + JSON + заголовки админа и пользователя
 
-const ADMIN_TOKEN_KEY = 'pixart-admin-token'
+const ADMIN_TOKEN_KEY = 'styles-admin-token'
 const USER_TOKEN_KEY = 'styles-user-token'
 
 const readToken = (key) => {

@@ -1,7 +1,7 @@
-// PIXART MARKET — Prisma schema для MySQL
+// 13 STYLES — Prisma schema для MySQL
 // Инструкция перехода с SQLite:
 //   1. cp prisma/schema.mysql.prisma prisma/schema.prisma
-//   2. В .env задать: DATABASE_URL="mysql://user:password@host:3306/pixart"
+//   2. В .env задать: DATABASE_URL="mysql://user:password@host:3306/13styles"
 //   3. bun run db:push
 // Логика кода не меняется: DTO-слой работает с JSON-строками одинаково на обеих СУБД.
 

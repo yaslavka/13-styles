@@ -1,13 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ShoppingCart, Star, Truck, RotateCcw, ShieldCheck, ZoomIn } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, ShoppingCart, Star, Truck, RotateCcw, ShieldCheck, ZoomIn } from 'lucide-react'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { A11y, Autoplay } from 'swiper/modules'
+import 'swiper/css'
 import { toast } from 'sonner'
 import useShop from '@/store/useShop'
 import useCart from '@/store/useCart'
-import useHoverSlider from '@/hooks/useHoverSlider'
 import useT from '@/hooks/useT'
 import { styleGradient, formatPrice, AGE_LABEL } from '@/lib/constants'
 import ProductBadges from '@/components/product/ProductBadges'
@@ -18,7 +20,8 @@ import ProductGrid from '@/components/product/ProductGrid'
 import Reveal from '@/components/motion/Reveal'
 
 // Детальная страница товара: данные приходят с сервера (SSR — SEO-ready),
-// скользящая галерея с зум-лайтбоксом, размеры, количество, характеристики
+// большой слайдер-галерея на Swiper: перетаскивание/свайп, стрелки, дотсы,
+// автолистание при наведении — плавное скольжение без миганий, зум-лайтбокс
 
 const ProductView = ({ product, related = [] }) => {
   const navigate = useShop((state) => state.navigate)
@@ -33,6 +36,18 @@ const ProductView = ({ product, related = [] }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
 
+  // Большой слайдер на Swiper: индекс синхронизируется с дотсами и превью,
+  // при наведении — автолистание, при перетаскивании клик по зуму не срабатывает.
+  // Порог сдвига 8px отслеживается напрямую по pointer-событиям — надёжно и для мыши, и для пальца.
+  const images = product?.images || []
+  const hasMultiple = images.length > 1
+  const swiperRef = useRef(null)
+  const dragMovedRef = useRef(false)
+  const pointerStartRef = useRef(null)
+  const [index, setIndex] = useState(0)
+  const [hovering, setHovering] = useState(false)
+  const progress = hovering && hasMultiple ? ((index + 1) / images.length) * 100 : 0
+
   // Сброс выбора при переходе на другой товар (клиентская навигация между карточками):
   // подстройка состояния прямо в рендере — без каскадных ререндеров
   const [lastProductId, setLastProductId] = useState(product?.id)
@@ -41,13 +56,53 @@ const ProductView = ({ product, related = [] }) => {
     setSize((product?.sizes || [])[0] || '')
     setQty(1)
     setLightboxOpen(false)
+    setIndex(0)
   }
-
-  const { index, hovering, handlers, setIndex, hasMultiple, progress } = useHoverSlider(product?.images || [])
 
   if (!product) return null
 
   const soldOut = (product.stock ?? 0) <= 0
+
+  const attachSwiper = (swiper) => {
+    swiperRef.current = swiper
+    swiper.autoplay?.stop()
+  }
+
+  // Перетаскивание слайдера не должно открывать лайтбокс — только настоящий клик/тап
+  const onScenePointerDown = (event) => {
+    pointerStartRef.current = { x: event.clientX, y: event.clientY }
+    dragMovedRef.current = false
+  }
+
+  const onScenePointerUp = (event) => {
+    const start = pointerStartRef.current
+    pointerStartRef.current = null
+    if (!start) return
+    if (Math.abs(event.clientX - start.x) > 8 || Math.abs(event.clientY - start.y) > 8) {
+      dragMovedRef.current = true
+    }
+  }
+
+  const handleSceneClick = () => {
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false
+      return
+    }
+    openLightbox()
+  }
+
+  const startHoverCycle = () => {
+    setHovering(true)
+    if (hasMultiple) swiperRef.current?.autoplay?.start()
+  }
+
+  const stopHoverCycle = () => {
+    setHovering(false)
+    if (hasMultiple) {
+      swiperRef.current?.autoplay?.stop()
+      swiperRef.current?.slideToLoop(0)
+    }
+  }
 
   const handleAdd = (openAfter) => {
     if (soldOut) {
@@ -71,7 +126,6 @@ const ProductView = ({ product, related = [] }) => {
     setLightboxOpen(true)
   }
 
-  const images = product.images || []
   const categoryHref = product.category
     ? href('subcategory', { slug: product.category.slug, sub: product.subcategory?.slug || '' })
     : href('catalog')
@@ -103,14 +157,16 @@ const ProductView = ({ product, related = [] }) => {
       </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <div onMouseEnter={handlers.onMouseEnter} onMouseLeave={handlers.onMouseLeave}>
+        <div onMouseEnter={startHoverCycle} onMouseLeave={stopHoverCycle}>
           <motion.div
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
             className="glow-frame relative aspect-square cursor-zoom-in overflow-hidden rounded-[1.8rem]"
             style={{ background: styleGradient(product.category?.style ?? 2) }}
-            onClick={() => openLightbox()}
+            onClick={handleSceneClick}
+            onPointerDownCapture={onScenePointerDown}
+            onPointerUpCapture={onScenePointerUp}
             role="button"
             tabIndex={0}
             aria-label={`${product.name} — ${t('product.zoomHint')}`}
@@ -121,23 +177,36 @@ const ProductView = ({ product, related = [] }) => {
               }
             }}
           >
-            <ProductBadges label={product.label} discountPercent={product.discountPercent} />
+            <div className="absolute inset-0 z-10">
+              <ProductBadges label={product.label} discountPercent={product.discountPercent} />
+            </div>
 
-            <div
-              className="absolute inset-0 flex transition-transform duration-[650ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-              style={{ transform: `translateX(-${index * 100}%)` }}
+            <Swiper
+              key={product.id}
+              modules={[A11y, Autoplay]}
+              onSwiper={attachSwiper}
+              onSlideChange={(swiper) => setIndex(swiper.realIndex)}
+              loop={hasMultiple}
+              speed={550}
+              grabCursor={hasMultiple}
+              autoplay={{ delay: 850, disableOnInteraction: false, stopOnMouseEnter: false }}
+              className="absolute inset-0 h-full w-full"
             >
               {images.map((src, slideIndex) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt={`${product.name} — ${slideIndex + 1}`}
-                  className={`h-full w-full shrink-0 object-cover transition-transform duration-[650ms] ease-out ${
-                    hovering && hasMultiple ? 'scale-[1.05]' : 'scale-100'
-                  }`}
-                />
+                <SwiperSlide key={src} className="h-full w-full">
+                  <img
+                    src={src}
+                    alt={`${product.name} — ${slideIndex + 1}`}
+                    className={`h-full w-full object-cover transition-transform duration-[600ms] ease-out ${
+                      hovering && hasMultiple ? 'scale-[1.05]' : 'scale-100'
+                    }`}
+                    draggable={false}
+                    loading={slideIndex === 0 ? 'eager' : 'lazy'}
+                    itemProp="image"
+                  />
+                </SwiperSlide>
               ))}
-            </div>
+            </Swiper>
 
             <div className="absolute inset-x-6 top-0 h-1 bg-black/25">
               <div
@@ -148,11 +217,47 @@ const ProductView = ({ product, related = [] }) => {
             </div>
 
             {hasMultiple ? (
-              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2" aria-hidden>
-                {images.map((_, dotIndex) => (
-                  <span key={dotIndex} className={`h-2 rounded-full transition-all duration-300 ${dotIndex === index ? 'w-7 bg-orange-400' : 'w-2 bg-white/60'}`} />
-                ))}
-              </div>
+              <>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    swiperRef.current?.slidePrev()
+                  }}
+                  className="glass-btn glass-btn-ghost absolute left-3 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center"
+                  aria-label={t('product.prevPhoto')}
+                >
+                  <ChevronLeft className="h-5 w-5 text-white" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    swiperRef.current?.slideNext()
+                  }}
+                  className="glass-btn glass-btn-ghost absolute right-3 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center"
+                  aria-label={t('product.nextPhoto')}
+                >
+                  <ChevronRight className="h-5 w-5 text-white" aria-hidden />
+                </button>
+
+                <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+                  {images.map((_, dotIndex) => (
+                    <button
+                      key={dotIndex}
+                      type="button"
+                      aria-label={`Photo ${dotIndex + 1}`}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        swiperRef.current?.slideToLoop(dotIndex)
+                      }}
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        dotIndex === index ? 'w-7 bg-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.7)]' : 'w-2 bg-white/60 hover:bg-white'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
             ) : null}
 
             <span className="glass-btn glass-btn-ghost absolute bottom-4 right-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold text-purple-200">
@@ -167,8 +272,8 @@ const ProductView = ({ product, related = [] }) => {
                 <button
                   key={thumb}
                   type="button"
-                  onClick={() => setIndex(thumbIndex)}
-                  onMouseEnter={() => setIndex(thumbIndex)}
+                  onClick={() => swiperRef.current?.slideToLoop(thumbIndex)}
+                  onMouseEnter={() => swiperRef.current?.slideToLoop(thumbIndex)}
                   aria-label={`Photo ${thumbIndex + 1}`}
                   className={`aspect-square overflow-hidden rounded-2xl transition-all duration-300 ${
                     thumbIndex === index ? 'ring-2 ring-orange-400 shadow-[0_8px_24px_rgba(249,115,22,0.4)]' : 'opacity-75 hover:opacity-100'

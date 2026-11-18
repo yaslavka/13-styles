@@ -18,7 +18,7 @@ const safeEqual = (left, right) => {
   }
 }
 
-const adminToken = () => createHmac('sha256', `${ADMIN_LOGIN}:${ADMIN_PASSWORD}`).update('pixart-admin-v1').digest('hex')
+const adminToken = () => createHmac('sha256', `${ADMIN_LOGIN}:${ADMIN_PASSWORD}`).update('styles-admin-v1').digest('hex')
 
 const verifyCredentials = (login, password) =>
   typeof login === 'string' &&

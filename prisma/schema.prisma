@@ -1,8 +1,8 @@
-// PIXART MARKET — Prisma schema
+// 13 STYLES — Prisma schema
 // По умолчанию используется SQLite (файл db/custom.db).
 // Для перехода на MySQL используйте prisma/schema.mysql.prisma:
 //   cp prisma/schema.mysql.prisma prisma/schema.prisma && bun run db:push
-// и задайте DATABASE_URL вида mysql://user:pass@host:3306/pixart
+// и задайте DATABASE_URL вида mysql://user:pass@host:3306/13styles
 
 generator client {
   provider = "prisma-client-js"
@@ -20,7 +20,7 @@ model Category {
   name          String
   subtitle      String
   icon          String        @default("Shirt")
-  // Индекс одного из 13 градиентных стилей бренда PIXART (0..12)
+  // Индекс одного из 13 градиентных стилей бренда 13 STYLES (0..12)
   style         Int           @default(0)
   sort          Int           @default(0)
   products      Product[]
