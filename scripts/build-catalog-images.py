@@ -14,6 +14,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import cv2
 import numpy as np
+import onnxruntime as ort
 import requests
 from PIL import Image, ImageOps
 
@@ -23,7 +24,7 @@ MANIFEST_PATH = os.path.join(ROOT, 'data', 'catalog-manifest.json')
 OUT_DIR = os.path.join(ROOT, 'public', 'products', 'catalog')
 LOG_PATH = os.path.join(ROOT, 'data', 'catalog-images.log')
 
-WORKERS = 8          # процессов (изоляция: segfault в cv2 не убивает скрипт)
+WORKERS = 8          # процессов (изоляция: падение воркера не убивает скрипт)
 MAX_IMAGES = 3        # фото на товар
 DL_TIMEOUT = 20       # сек на запрос
 MAX_SIDE = 1200       # верхний предел размера (без апскейла)
@@ -41,27 +42,64 @@ def log(msg):
 
 
 def get_detectors():
-    if not hasattr(_tl, 'net'):
-        _tl.net = cv2.dnn.readNetFromCaffe(
+    """Ансамбль детекторов человека: YOLOv8n (COCO) + MobileNet-SSD (VOC) + Haar-лица."""
+    if not hasattr(_tl, 'ready'):
+        _tl.yolo = ort.InferenceSession(
+            os.path.join(ROOT, 'data', 'yolov8n.onnx'), providers=['CPUExecutionProvider'])
+        _tl.ssd = cv2.dnn.readNetFromCaffe(
             os.path.join(ROOT, 'data', 'mobilenet-ssd.prototxt'),
             os.path.join(ROOT, 'data', 'mobilenet-ssd.caffemodel'))
-        _tl.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
-        _tl.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+        base = cv2.data.haarcascades
+        _tl.face = cv2.CascadeClassifier(base + 'haarcascade_frontalface_default.xml')
+        _tl.profile = cv2.CascadeClassifier(base + 'haarcascade_profileface.xml')
+        _tl.ready = True
+
+
+def _yolo_person(bgr):
+    h, w = bgr.shape[:2]
+    r = min(640 / h, 640 / w)
+    nh, nw = int(h * r), int(w * r)
+    rs = cv2.resize(bgr, (nw, nh))
+    lb = np.full((640, 640, 3), 114, dtype=np.uint8)
+    top, left = (640 - nh) // 2, (640 - nw) // 2
+    lb[top:top + nh, left:left + nw] = rs
+    blob = cv2.dnn.blobFromImage(lb, 1 / 255.0, (640, 640), swapRB=True).astype(np.float32)
+    out = _tl.yolo.run(None, {_tl.yolo.get_inputs()[0].name: blob})[0][0].T
+    scores = out[:, 4:]
+    cls_ids = scores.argmax(1)
+    confs = scores.max(1)
+    for i in np.where(confs > 0.35)[0]:
+        if cls_ids[i] == 0:  # person (COCO)
+            return True
+    return False
+
+
+def _ssd_person(bgr):
+    blob = cv2.dnn.blobFromImage(cv2.resize(bgr, (300, 300)), 0.007843, (300, 300), 127.5)
+    _tl.ssd.setInput(blob)
+    out = _tl.ssd.forward()
+    for i in range(out.shape[2]):
+        if int(out[0, 0, i, 1]) == 15 and float(out[0, 0, i, 2]) > 0.35:  # person (VOC)
+            return True
+    return False
 
 
 def has_person(pil_img):
-    """True — на фото обнаружен человек (MobileNet-SSD, класс person, conf>0.35)."""
+    """True — на фото человек или его части (ансамбль детекторов)."""
     get_detectors()
+    bgr = cv2.cvtColor(np.array(pil_img.convert('RGB')), cv2.COLOR_RGB2BGR)
+    if _yolo_person(bgr) or _ssd_person(bgr):
+        return True
     scale = 480.0 / max(pil_img.size)
     small = pil_img if scale >= 1 else pil_img.resize(
         (max(1, int(pil_img.width * scale)), max(1, int(pil_img.height * scale))), Image.BILINEAR)
-    img = cv2.cvtColor(np.array(small.convert('RGB')), cv2.COLOR_RGB2BGR)
-    blob = cv2.dnn.blobFromImage(img, 0.007843, (300, 300), 127.5)
-    _tl.net.setInput(blob)
-    out = _tl.net.forward()
-    for i in range(out.shape[2]):
-        if int(out[0, 0, i, 1]) == 15 and float(out[0, 0, i, 2]) > 0.35:
-            return True
+    gray = cv2.equalizeHist(cv2.cvtColor(np.array(small.convert('RGB')), cv2.COLOR_RGB2GRAY))
+    if len(_tl.face.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=4, minSize=(30, 30))):
+        return True
+    if len(_tl.profile.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=5, minSize=(30, 30))):
+        return True
+    if len(_tl.profile.detectMultiScale(cv2.flip(gray, 1), scaleFactor=1.08, minNeighbors=5, minSize=(30, 30))):
+        return True
     return False
 
 
