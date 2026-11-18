@@ -39,6 +39,7 @@ const Header = () => {
     { key: 'nav.women', view: 'category', slug: 'women' },
     { key: 'nav.shoes', view: 'category', slug: 'shoes' },
     { key: 'nav.accessories', view: 'category', slug: 'accessories' },
+    { key: 'nav.kids', view: 'category', slug: 'kids' },
     { key: 'nav.styles', view: 'styles' },
   ]
 

@@ -70,3 +70,10 @@ server.log
 # npm lockfiles — генерируются локально (npm install), в репозиторий не попадают
 package-lock.json
 tool-results/
+
+# Фото Garments2Look (438 ГБ исходников на HF — в git не кладём, скачиваются scripts/port-garments2look.py)
+public/products/g2l/
+data/g2l-sync.log
+data/fetch-run.log
+db/seed/custom.db
+db/seed/custom.db

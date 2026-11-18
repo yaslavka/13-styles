@@ -132,6 +132,19 @@ const ensureImages = (env) => {
   child.unref()
 }
 
+// Garments2Look: импорт метаданных (если БД пустая) + публикация товаров,
+// чьи фото скачаны в public/products/g2l (не блокирует запуск)
+const syncGarments2Look = () => {
+  const child = spawn(runtimeBin(), ['scripts/sync-garments2look.mjs'], {
+    cwd: ROOT,
+    env: { ...process.env, DATABASE_URL: toDbUrl(DB_PATH) },
+    detached: true,
+    stdio: ['ignore', fs.openSync(path.join(ROOT, 'data', 'g2l-sync.log'), 'a'), fs.openSync(path.join(ROOT, 'data', 'g2l-sync.log'), 'a')],
+  })
+  child.unref()
+  log('g2l-sync запущен в фоне (публикация товаров Garments2Look с фото на диске)')
+}
+
 const ensureChatService = () => {
   if (!fs.existsSync(path.join(CHAT_DIR, 'index.js'))) {
     log('chat-service не найден — пропускаем')
@@ -165,6 +178,9 @@ const main = async () => {
 
   // 4) Картинки каталога (фон)
   ensureImages(env)
+
+  // 4.1) Garments2Look: метаданные + публикация по фото на диске (фон)
+  syncGarments2Look()
 
   // 5) Чат-сервис на :3003
   if (await portBusy(3003)) {

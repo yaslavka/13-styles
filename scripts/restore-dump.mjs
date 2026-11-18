@@ -1,12 +1,13 @@
 // Восстановление дампа базы 13 STYLES: если БД отсутствует или пуста,
-// разворачивается снапшот db/seed/custom.db (все категории, подкатегории,
-// товары каталога, декор). Запуск: node scripts/restore-dump.mjs
+// разворачивается снапшот db/seed/custom.db.gz (все категории, подкатегории,
+// товары каталога и Garments2Look, декор). Запуск: node scripts/restore-dump.mjs
 // Кроссплатформенно (Windows + Linux): перед копированием гарантированно
 // закрываем все открытые дескрипторы БД — Windows блокирует файл на запись,
 // пока его держит открытым процесс.
 
 import fs from 'node:fs'
 import path from 'node:path'
+import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import { PrismaClient } from '@prisma/client'
 
@@ -14,6 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
 const DB_PATH = path.join(ROOT, 'db', 'custom.db')
 const SEED_DB_PATH = path.join(ROOT, 'db', 'seed', 'custom.db')
+const SEED_GZ_PATH = path.join(ROOT, 'db', 'seed', 'custom.db.gz')
 
 // Служебные файлы SQLite, которые могут остаться от прошлой сессии
 const SIDE_FILES = ['-journal', '-wal', '-shm']
@@ -24,16 +26,22 @@ const copySeed = () => {
   for (const suffix of SIDE_FILES) {
     try { fs.rmSync(DB_PATH + suffix) } catch {}
   }
-  fs.copyFileSync(SEED_DB_PATH, DB_PATH)
+  if (fs.existsSync(SEED_GZ_PATH)) {
+    // Основной формат снапшота — gzip (БД с Garments2Look > 100 МБ, лимит GitHub на файл)
+    fs.writeFileSync(DB_PATH, zlib.gunzipSync(fs.readFileSync(SEED_GZ_PATH)))
+    console.log('[restore] БД восстановлена из дампа: db/seed/custom.db.gz → db/custom.db')
+  } else {
+    fs.copyFileSync(SEED_DB_PATH, DB_PATH)
+    console.log('[restore] БД восстановлена из дампа: db/seed/custom.db → db/custom.db')
+  }
   for (const suffix of SIDE_FILES) {
     try { fs.rmSync(DB_PATH + suffix) } catch {}
   }
-  console.log('[restore] БД восстановлена из дампа: db/seed/custom.db → db/custom.db')
 }
 
 const main = async () => {
-  if (!fs.existsSync(SEED_DB_PATH)) {
-    console.log('[restore] дамп db/seed/custom.db не найден — пропускаем (БД создаётся через prisma db push)')
+  if (!fs.existsSync(SEED_GZ_PATH) && !fs.existsSync(SEED_DB_PATH)) {
+    console.log('[restore] дамп db/seed/custom.db(.gz) не найден — пропускаем (БД создаётся через prisma db push)')
     return
   }
 

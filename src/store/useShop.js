@@ -38,7 +38,9 @@ const buildPath = (view, options = {}) => {
     case 'account':
       return withQuery('/account')
     case 'admin':
-      return slug ? `/admin/${slug}` : '/admin'
+      // withQuery обязателен: карандашик «Редактировать» передаёт ?id= —
+      // без него форма /admin/product-new открывается как добавление нового товара
+      return withQuery(slug ? `/admin/${slug}` : '/admin')
     case 'styles':
       return '/styles'
     case 'home':
