@@ -10,6 +10,7 @@ import useShop from '@/store/useShop'
 import useT from '@/hooks/useT'
 import useInfiniteList from '@/hooks/useInfiniteList'
 import { formatPrice, ORDER_STATUSES, styleGradient } from '@/lib/constants'
+import SmartImage from '@/components/product/SmartImage'
 import GlassButton from '@/components/motion/GlassButton'
 import GradientText from '@/components/motion/GradientText'
 import { Input } from '@/components/ui/input'
@@ -81,8 +82,8 @@ const OrdersTab = () => {
               <ul className="space-y-2.5 border-t border-purple-500/20 bg-[#0a0918]/50 px-4 py-3">
                 {order.items.map((item, index) => (
                   <li key={`${order.id}-${index}`} className="flex items-center gap-3">
-                    <span className="h-11 w-11 shrink-0 overflow-hidden rounded-xl" style={{ background: styleGradient(2) }}>
-                      {item.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover image-pixelated" /> : null}
+                    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl" style={{ background: styleGradient(2) }}>
+                      {item.image ? <SmartImage src={item.image} alt={item.name} spinner="sm" className="h-full w-full object-cover image-pixelated" /> : null}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold text-white">{item.name}</span>

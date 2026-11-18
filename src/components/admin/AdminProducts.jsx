@@ -9,6 +9,7 @@ import useInfiniteList from '@/hooks/useInfiniteList'
 import useT from '@/hooks/useT'
 import { formatPrice, styleGradient } from '@/lib/constants'
 import GlassButton from '@/components/motion/GlassButton'
+import SmartImage from '@/components/product/SmartImage'
 import { Switch } from '@/components/ui/switch'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { AdminCardSkeleton } from '@/components/ui/card-skeleton'
@@ -82,7 +83,7 @@ const AdminProducts = () => {
                 <article key={product.id} className="glass-card flex gap-3 p-3">
                   <span className="relative h-28 w-24 shrink-0 overflow-hidden rounded-xl border border-purple-500/30" style={{ background: styleGradient(product.category?.style ?? 2) }}>
                     {product.images?.[0] ? (
-                      <img src={product.images[0]} alt="" className="h-full w-full object-cover image-pixelated" />
+                      <SmartImage src={product.images[0]} alt="" spinner="sm" className="h-full w-full object-cover image-pixelated" />
                     ) : (
                       <Package className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-white/70" aria-hidden />
                     )}

@@ -14,6 +14,7 @@ import useT from '@/hooks/useT'
 import { styleGradient, formatPrice, AGE_LABEL } from '@/lib/constants'
 import ProductBadges from '@/components/product/ProductBadges'
 import LightboxGallery from '@/components/product/LightboxGallery'
+import SmartImage from '@/components/product/SmartImage'
 import PriceTag from '@/components/motion/PriceTag'
 import GlassButton from '@/components/motion/GlassButton'
 import ProductGrid from '@/components/product/ProductGrid'
@@ -196,13 +197,13 @@ const ProductView = ({ product, related = [] }) => {
             >
               {images.map((src, slideIndex) => (
                 <SwiperSlide key={src} className="h-full w-full">
-                  <img
+                  <SmartImage
                     src={src}
                     alt={`${product.name} — ${slideIndex + 1}`}
+                    spinner="lg"
                     className={`h-full w-full object-cover transition-transform duration-[600ms] ease-out ${
                       hovering && hasMultiple ? 'scale-[1.05]' : 'scale-100'
                     }`}
-                    draggable={false}
                     loading={slideIndex === 0 ? 'eager' : 'lazy'}
                     itemProp="image"
                   />
@@ -277,12 +278,12 @@ const ProductView = ({ product, related = [] }) => {
                   onClick={() => swiperRef.current?.slideToLoop(thumbIndex)}
                   onMouseEnter={() => swiperRef.current?.slideToLoop(thumbIndex)}
                   aria-label={`Photo ${thumbIndex + 1}`}
-                  className={`aspect-square overflow-hidden rounded-2xl transition-all duration-300 ${
+                  className={`relative aspect-square overflow-hidden rounded-2xl transition-all duration-300 ${
                     thumbIndex === index ? 'ring-2 ring-orange-400 shadow-[0_8px_24px_rgba(249,115,22,0.4)]' : 'opacity-75 hover:opacity-100'
                   }`}
                   style={{ background: styleGradient(product.category?.style ?? 2) }}
                 >
-                  <img src={thumb} alt="" className="h-full w-full object-cover" />
+                  <SmartImage src={thumb} alt="" spinner="sm" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>

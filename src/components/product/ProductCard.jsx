@@ -10,6 +10,7 @@ import useShop from '@/store/useShop'
 import useT from '@/hooks/useT'
 import { styleGradient } from '@/lib/constants'
 import ProductBadges from '@/components/product/ProductBadges'
+import SmartImage from '@/components/product/SmartImage'
 import PriceTag from '@/components/motion/PriceTag'
 
 // Карточка товара:
@@ -68,16 +69,16 @@ const ProductCard = ({ product }) => {
           style={{ transform: `translateX(-${index * 100}%)` }}
         >
           {images.map((src, slideIndex) => (
-            <img
-              key={src}
-              src={src}
-              alt={`${product.name} — ${slideIndex + 1}`}
-              className={`h-full w-full shrink-0 object-cover transition-transform duration-[600ms] ease-out ${
-                hovering && hasMultiple ? 'scale-[1.07]' : 'scale-100'
-              }`}
-              loading="lazy"
-              itemProp="image"
-            />
+            <div key={src} className="relative h-full w-full shrink-0">
+              <SmartImage
+                src={src}
+                alt={`${product.name} — ${slideIndex + 1}`}
+                className={`h-full w-full object-cover transition-transform duration-[600ms] ease-out ${
+                  hovering && hasMultiple ? 'scale-[1.07]' : 'scale-100'
+                }`}
+                itemProp="image"
+              />
+            </div>
           ))}
         </div>
 

@@ -8,6 +8,7 @@ import useShop from '@/store/useShop'
 import useT from '@/hooks/useT'
 import { formatPrice } from '@/lib/constants'
 import GlassButton from '@/components/motion/GlassButton'
+import SmartImage from '@/components/product/SmartImage'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -124,8 +125,8 @@ const PayItemDialog = ({ item, onClose }) => {
           <form onSubmit={submit} className="space-y-4">
             {/* Позиция оплаты */}
             <div className="glass-card flex items-center gap-3 p-3">
-              <span className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10">
-                {item.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : null}
+              <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10">
+                {item.image ? <SmartImage src={item.image} alt={item.name} spinner="sm" className="h-full w-full object-cover" /> : null}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-display text-sm font-bold text-white">{item.name}</span>

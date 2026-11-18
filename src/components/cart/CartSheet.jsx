@@ -8,6 +8,7 @@ import useShop from '@/store/useShop'
 import useT from '@/hooks/useT'
 import { formatPrice } from '@/lib/constants'
 import PayItemDialog from '@/components/cart/PayItemDialog'
+import SmartImage from '@/components/product/SmartImage'
 
 // Корзина: изменение количества, удаление и ПОЗИЦИОННАЯ оплата.
 // Общей кнопки «Оплатить» нет — каждый товар оплачивается своей кнопкой;
@@ -62,9 +63,9 @@ const CartSheet = () => {
                   const byLink = item.customPayment === true && item.paymentUrl
                   return (
                     <li key={item.key} className="glass-card flex gap-3.5 p-3.5">
-                      <span className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10">
+                      <span className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10">
                         {item.image ? (
-                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                          <SmartImage src={item.image} alt={item.name} spinner="sm" className="h-full w-full object-cover" />
                         ) : null}
                       </span>
                       <div className="min-w-0 flex-1">

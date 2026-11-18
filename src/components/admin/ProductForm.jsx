@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import API from '@/lib/api'
 import { GENDERS, LABELS, CLOTHING_SIZES, SHOE_SIZES } from '@/lib/constants'
 import GlassButton from '@/components/motion/GlassButton'
+import SmartImage from '@/components/product/SmartImage'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -300,7 +301,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         <div className="flex flex-wrap gap-2">
           {form.images.map((url) => (
             <span key={url} className="group relative h-16 w-16 overflow-hidden rounded-sm border border-purple-500/40">
-              <img src={url} alt="" className="h-full w-full object-cover image-pixelated" />
+              <SmartImage src={url} alt="" spinner="sm" className="h-full w-full object-cover image-pixelated" />
               <button
                 type="button"
                 onClick={() => setField('images')(form.images.filter((item) => item !== url))}

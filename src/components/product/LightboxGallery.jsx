@@ -6,6 +6,7 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import { A11y, Keyboard } from 'swiper/modules'
 import 'swiper/css'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import SmartImage from '@/components/product/SmartImage'
 import useT from '@/hooks/useT'
 
 // Лайтбокс: полноэкранный слайдер фото товара на Swiper (swiper/react).
@@ -65,11 +66,11 @@ const LightboxGallery = ({ open, images = [], index = 0, onIndexChange, onClose,
           >
             {images.map((src, slideIndex) => (
               <SwiperSlide key={src} className="!h-full !w-full">
-                <img
+                <SmartImage
                   src={src}
                   alt={`${alt} — ${slideIndex + 1}`}
+                  spinner="lg"
                   className="absolute inset-0 m-auto h-full max-h-[100vh] max-h-[100dvh] w-full max-w-[100vw] object-contain"
-                  draggable={false}
                   loading={slideIndex === 0 ? 'eager' : 'lazy'}
                   itemProp="image"
                 />

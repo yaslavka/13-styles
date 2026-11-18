@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import API from '@/lib/api'
 import useInfiniteList from '@/hooks/useInfiniteList'
 import { formatPrice, ORDER_STATUSES, styleGradient } from '@/lib/constants'
+import SmartImage from '@/components/product/SmartImage'
 import { OrderCardSkeleton } from '@/components/ui/card-skeleton'
 
 // Заказы админки: карточки (не таблица), состав раскрывается, подгрузка по скроллу по 25 записей
@@ -102,8 +103,8 @@ const AdminOrders = () => {
                       <ul className="space-y-2">
                         {order.items.map((item, index) => (
                           <li key={`${order.id}-${index}`} className="flex items-center gap-3 text-sm">
-                            <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg" style={{ background: styleGradient(2) }}>
-                              {item.image ? <img src={item.image} alt="" className="h-full w-full object-cover image-pixelated" /> : null}
+                            <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg" style={{ background: styleGradient(2) }}>
+                              {item.image ? <SmartImage src={item.image} alt="" spinner="sm" className="h-full w-full object-cover image-pixelated" /> : null}
                             </span>
                             <span className="min-w-0 flex-1 truncate text-purple-100">{item.name}</span>
                             {item.size ? <span className="text-xs text-muted-foreground">р-р {item.size}</span> : null}

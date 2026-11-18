@@ -9,6 +9,7 @@ import useShop from '@/store/useShop'
 import useT from '@/hooks/useT'
 import { formatPrice } from '@/lib/constants'
 import GlassButton from '@/components/motion/GlassButton'
+import SmartImage from '@/components/product/SmartImage'
 import GradientText from '@/components/motion/GradientText'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -186,8 +187,8 @@ const CheckoutView = () => {
           <ul className="scrollbar-glass mt-5 max-h-80 space-y-4 overflow-y-auto pr-1">
             {items.map((item) => (
               <li key={item.key} className="flex items-center gap-3">
-                <span className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10">
-                  {item.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : null}
+                <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10">
+                  {item.image ? <SmartImage src={item.image} alt={item.name} spinner="sm" className="h-full w-full object-cover" /> : null}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-bold text-white">{item.name}</span>

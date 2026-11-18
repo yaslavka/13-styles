@@ -5,6 +5,7 @@ import { Check } from 'lucide-react'
 import useShop from '@/store/useShop'
 import useT from '@/hooks/useT'
 import { STYLES as STYLE_LIST } from '@/lib/constants'
+import SmartImage from '@/components/product/SmartImage'
 import GradientText from '@/components/motion/GradientText'
 import Reveal from '@/components/motion/Reveal'
 
@@ -95,10 +96,9 @@ const StylesView = () => {
           {PRODUCT_SLUGS.map((slug) =>
             [1, 2, 3].map((shot) => (
               <figure key={`${slug}-${shot}`} className="group relative overflow-hidden rounded-2xl">
-                <img
+                <SmartImage
                   src={`/products/${slug}-${shot}.png`}
                   alt={t('styles.spriteAlt', { sprite: slug.split('-')[0], colorway: slug.split('-').pop() })}
-                  loading="lazy"
                   className="aspect-square w-full rounded-2xl object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               </figure>
