@@ -113,8 +113,20 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
     (filters.min > PRICE_LIMITS.min || filters.max < PRICE_LIMITS.max ? 1 : 0) +
     (searchInput || filters.search ? 1 : 0)
 
-  const heading = activeCategory ? activeCategory.name : t('catalog.title')
-  const subHeading = activeCategory ? activeCategory.subtitle : t('catalog.itemsShort')
+  // Заголовок страницы: подкатегория (если открыта её SEO-страница) или категория
+  const activeSubcategory = lockedSub && activeCategory
+    ? (activeCategory.subcategories || []).find((sub) => sub.slug === lockedSub) || null
+    : null
+  const heading = activeSubcategory
+    ? activeSubcategory.name
+    : activeCategory
+      ? activeCategory.name
+      : t('catalog.title')
+  const subHeading = activeSubcategory
+    ? activeCategory.subtitle
+    : activeCategory
+      ? activeCategory.subtitle
+      : t('catalog.itemsShort')
 
   const resetAll = () => {
     resetFilters()
