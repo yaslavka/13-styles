@@ -14,6 +14,7 @@ import ProductGrid from '@/components/product/ProductGrid'
 import Reveal from '@/components/motion/Reveal'
 import { ProductGridSkeleton } from '@/components/ui/card-skeleton'
 import { Input } from '@/components/ui/input'
+import { Slider } from '@/components/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 
@@ -138,6 +139,12 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
     resetFilters()
     setSearchInput('')
   }
+
+  // Компактный чип (Sizes / Shoes / Badges) — как было: горизонтальная лента мелких кнопок
+  const chipClass = (active, tone = 'primary') =>
+    `rounded-full px-3.5 py-2 font-display text-xs font-bold transition-all ${
+      active ? (tone === 'orange' ? CHIP_ACTIVE_ORANGE : CHIP_ACTIVE) : CHIP_GHOST
+    }`
 
   // Единый набор секций фильтров: рендерится в сайдбаре (десктоп) и в боттомщите (мобильные).
   // withSort добавляет секцию сортировки внутрь мобильного щита (на десктопе сортировка живёт в тулбаре над сеткой).
@@ -276,7 +283,7 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
           </div>
         </section>
 
-        {/* Цена: мин/макс с ограничением PRICE_LIMITS */}
+        {/* Цена: поля ввода + range-слайдер от минимума до максимума */}
         <section aria-label={t('catalog.price')}>
           <SectionTitle>{t('catalog.price')}</SectionTitle>
           <div className="flex items-center gap-2">
@@ -311,57 +318,73 @@ const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null 
               aria-label={t('catalog.priceMax')}
             />
           </div>
+
+          {/* Range-слайдер: два ползунка (от/до), синхронизированы с полями ввода */}
+          <div className="mt-3 px-1.5">
+            <Slider
+              value={[filters.min, filters.max]}
+              min={PRICE_LIMITS.min}
+              max={PRICE_LIMITS.max}
+              step={1}
+              minStepsBetweenThumbs={1}
+              onValueChange={([low, high]) => setFilter({ min: low, max: high })}
+              aria-label={t('catalog.price')}
+              className="[&_[data-slot=slider-range]]:bg-gradient-to-r [&_[data-slot=slider-range]]:from-purple-500 [&_[data-slot=slider-range]]:to-orange-400 [&_[data-slot=slider-thumb]]:size-4.5 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:border-orange-300 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-[0_0_10px_rgba(249,115,22,0.5)] [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:border [&_[data-slot=slider-track]]:border-white/15 [&_[data-slot=slider-track]]:bg-white/10"
+            />
+            <div className="mt-1.5 flex justify-between text-[10px] font-bold tracking-wider text-purple-300/70">
+              <span>€{PRICE_LIMITS.min}</span>
+              <span>€{PRICE_LIMITS.max}</span>
+            </div>
+          </div>
         </section>
 
-        {/* Размеры: одежда + обувь — кнопки в столбик как в админке */}
+        {/* Размеры: одежда + обувь — компактные чипы лентой, как было */}
         <section aria-label={t('catalog.sizes')}>
           <SectionTitle>{t('catalog.sizes')}</SectionTitle>
-          <div role="group" aria-label={t('catalog.sizes')} className="space-y-4">
-            <div className="flex flex-col gap-1.5">
+          <div role="group" aria-label={t('catalog.sizes')} className="space-y-3">
+            <div className="flex flex-wrap gap-2">
               {CLOTHING_SIZES.map((size) => (
                 <button
                   key={size}
                   type="button"
                   onClick={() => toggleSize(size)}
                   aria-pressed={filters.sizes.includes(size)}
-                  className={ROW_CLASS(filters.sizes.includes(size), 'orange')}
+                  className={chipClass(filters.sizes.includes(size), 'orange')}
                 >
                   {size}
                 </button>
               ))}
             </div>
-            <div className="space-y-1.5">
-              <span className="px-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-300/70">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300/70">
                 {t('catalog.sizeShoes')}
               </span>
-              <div className="flex flex-col gap-1.5">
-                {SHOE_SIZES.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => toggleSize(size)}
-                    aria-pressed={filters.sizes.includes(size)}
-                    className={ROW_CLASS(filters.sizes.includes(size), 'orange')}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
+              {SHOE_SIZES.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => toggleSize(size)}
+                  aria-pressed={filters.sizes.includes(size)}
+                  className={chipClass(filters.sizes.includes(size), 'orange')}
+                >
+                  {size}
+                </button>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Бейджи NEW / TOP / SALE — кнопки в столбик (повторный клик снимает выбор) */}
+        {/* Бейджи NEW / TOP / SALE — компактные чипы лентой, как было (повторный клик снимает выбор) */}
         <section aria-label={t('catalog.badges')}>
           <SectionTitle>{t('catalog.badges')}</SectionTitle>
-          <div role="group" aria-label={t('catalog.badges')} className="flex flex-col gap-1.5">
+          <div role="group" aria-label={t('catalog.badges')} className="flex flex-wrap gap-2">
             {LABEL_FILTERS.map((label) => (
               <button
                 key={label}
                 type="button"
                 onClick={() => setFilter({ label: filters.label === label ? 'all' : label })}
                 aria-pressed={filters.label === label}
-                className={ROW_CLASS(filters.label === label, 'orange')}
+                className={chipClass(filters.label === label, 'orange')}
               >
                 {label.toUpperCase()}
               </button>
