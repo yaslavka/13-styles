@@ -5,7 +5,10 @@ import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from
 
 const SESSION_SECRET = process.env.USER_AUTH_SECRET || '13styles-user-session-v1'
 
-const LOGIN_PATTERN = /^[a-zA-Z0-9_.-]{3,40}$/
+// Логин: валидация ТОЛЬКО на длину (3–40 символов), любые символы разрешены.
+// Сложные требования — только к паролю.
+const MIN_LOGIN_LENGTH = 3
+const MAX_LOGIN_LENGTH = 40
 const MIN_PASSWORD_LENGTH = 6
 const MAX_NAME_LENGTH = 80
 
@@ -39,7 +42,10 @@ const verifyPassword = (password, stored) => {
   }
 }
 
-const isValidLogin = (login) => typeof login === 'string' && LOGIN_PATTERN.test(login)
+const isValidLogin = (login) => {
+  const value = typeof login === 'string' ? login.trim() : ''
+  return value.length >= MIN_LOGIN_LENGTH && value.length <= MAX_LOGIN_LENGTH
+}
 
 const isValidPassword = (password) => typeof password === 'string' && password.length >= MIN_PASSWORD_LENGTH
 
@@ -74,6 +80,8 @@ const USER_AUTH = {
   resolveToken,
   requireUser,
   MIN_PASSWORD_LENGTH,
+  MIN_LOGIN_LENGTH,
+  MAX_LOGIN_LENGTH,
 }
 
 export default USER_AUTH

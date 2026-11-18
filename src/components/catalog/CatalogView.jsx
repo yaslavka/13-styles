@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { SlidersHorizontal, RotateCcw } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import useShop from '@/store/useShop'
 import useDebounce from '@/hooks/useDebounce'
@@ -10,34 +11,37 @@ import useT from '@/hooks/useT'
 import API from '@/lib/api'
 import { SORT_OPTIONS, GENDERS, CLOTHING_SIZES, SHOE_SIZES, PRICE_LIMITS, PAGE_SIZE } from '@/lib/constants'
 import ProductGrid from '@/components/product/ProductGrid'
-import GlassButton from '@/components/motion/GlassButton'
 import Reveal from '@/components/motion/Reveal'
 import { ProductGridSkeleton } from '@/components/ui/card-skeleton'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-// Каталог: сохраняемые фильтры, сортировка, бесконечная подгрузка карточек по скроллу (по 25)
+// Каталог: сохраняемые фильтры, сортировка, бесконечная подгрузка карточек по скроллу.
+// Категории/подкатегории — отдельные SEO-страницы (/catalog/category/[slug]...),
+// остальные параметры (цена, размеры, лейблы, пол, скидка, поиск) — через /api/products.
 
 const ALL_SIZES = [...CLOTHING_SIZES, ...SHOE_SIZES]
+const LABEL_FILTERS = ['new', 'hit', 'sale']
 
-const CatalogView = ({ categories = [] }) => {
-  const route = useShop((state) => state.route)
+const CatalogView = ({ categories = [], lockedCategory = null, lockedSub = null }) => {
   const filters = useShop((state) => state.filters)
   const setFilter = useShop((state) => state.setFilter)
   const resetFilters = useShop((state) => state.resetFilters)
+  const navigate = useShop((state) => state.navigate)
+  const href = useShop((state) => state.href)
+  const searchParams = useSearchParams()
   const t = useT()
 
-  const [searchInput, setSearchInput] = useState(route.query.search || '')
+  const urlSearch = searchParams.get('search') || ''
+  const [searchInput, setSearchInput] = useState(urlSearch)
   const debouncedSearch = useDebounce(searchInput, 400)
 
-  // Подхват поисковой фразы при внешней навигации (шапка/подвал) без лишних эффектов:
-  // сравниваем последний известный query и при изменении обновляем локальный ввод в рендере
-  const navSearch = route.query.search || ''
-  const [lastNavSearch, setLastNavSearch] = useState(navSearch)
-  if (lastNavSearch !== navSearch) {
-    setLastNavSearch(navSearch)
-    setSearchInput(navSearch)
+  // Подхват поисковой фразы при внешней навигации (шапка/подвал)
+  const [lastUrlSearch, setLastUrlSearch] = useState(urlSearch)
+  if (lastUrlSearch !== urlSearch) {
+    setLastUrlSearch(urlSearch)
+    setSearchInput(urlSearch)
   }
 
   useEffect(() => {
@@ -47,10 +51,13 @@ const CatalogView = ({ categories = [] }) => {
   const buildUrl = useCallback(
     (offset, pageSize) => {
       const params = new URLSearchParams()
-      if (filters.category && filters.category !== 'all') params.set('category', filters.category)
+      if (lockedCategory) params.set('category', lockedCategory)
+      else if (filters.category && filters.category !== 'all') params.set('category', filters.category)
+      if (lockedSub) params.set('sub', lockedSub)
       if (filters.gender && filters.gender !== 'all') params.set('gender', filters.gender)
       if (filters.search) params.set('search', filters.search)
       if (filters.sort && filters.sort !== 'new') params.set('sort', filters.sort)
+      if (filters.label && filters.label !== 'all') params.set('label', filters.label)
       if (filters.min > PRICE_LIMITS.min) params.set('min', String(filters.min))
       if (filters.max < PRICE_LIMITS.max) params.set('max', String(filters.max))
       if (filters.sizes?.length) params.set('sizes', filters.sizes.join(','))
@@ -59,7 +66,7 @@ const CatalogView = ({ categories = [] }) => {
       params.set('limit', String(pageSize))
       return `/api/products?${params.toString()}`
     },
-    [filters]
+    [filters, lockedCategory, lockedSub]
   )
 
   const { items, total, loading, loadingMore, hasMore, sentinelRef } = useInfiniteList({
@@ -74,58 +81,72 @@ const CatalogView = ({ categories = [] }) => {
   }
 
   const activeCategory = useMemo(
-    () => categories.find((category) => category.slug === filters.category),
-    [categories, filters.category]
+    () => categories.find((category) => category.slug === (lockedCategory || filters.category)),
+    [categories, lockedCategory, filters.category]
   )
+
+  const heading = activeCategory ? activeCategory.name : t('catalog.title')
+  const subHeading = activeCategory ? activeCategory.subtitle : t('catalog.itemsShort')
 
   const resetAll = () => {
     resetFilters()
     setSearchInput('')
   }
 
+  const chip = (active) =>
+    `rounded-full px-4 py-2 font-display text-sm font-bold transition-all ${
+      active ? 'glass-btn glass-btn-primary text-white' : 'glass-btn glass-btn-ghost text-purple-200'
+    }`
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <Reveal className="mb-7">
-        <h1 className="font-display text-4xl font-extrabold text-white sm:text-5xl">
-          {activeCategory ? activeCategory.name : t('catalog.title')}
-        </h1>
+        <h1 className="font-display text-4xl font-extrabold text-white sm:text-5xl">{heading}</h1>
         <p className="mt-2 text-base font-semibold text-muted-foreground">
-          {total > 0 ? t('catalog.items', { total }) : t('catalog.itemsShort')}
+          {total > 0 ? t('catalog.items', { total }) : subHeading}
         </p>
       </Reveal>
 
+      {/* Категории и подкатегории — ссылки на SEO-страницы */}
       <Reveal className="glass-panel mb-8 p-5">
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Categories">
-          <button
-            type="button"
-            onClick={() => setFilter({ category: 'all' })}
-            className={`rounded-full px-4 py-2 font-display text-sm font-bold transition-all ${
-              filters.category === 'all'
-                ? 'glass-btn glass-btn-primary text-white'
-                : 'glass-btn glass-btn-ghost text-purple-200'
-            }`}
-          >
+          <button type="button" onClick={() => navigate('catalog')} className={chip(!lockedCategory)}>
             {t('catalog.all')}
           </button>
           {categories.map((category) => (
             <button
               key={category.id}
               type="button"
-              onClick={() => setFilter({ category: category.slug })}
-              className={`rounded-full px-4 py-2 font-display text-sm font-bold transition-all ${
-                filters.category === category.slug
-                  ? 'glass-btn glass-btn-primary text-white'
-                  : 'glass-btn glass-btn-ghost text-purple-200'
-              }`}
+              onClick={() => navigate('category', { slug: category.slug })}
+              className={chip(lockedCategory === category.slug)}
             >
               {category.name}
             </button>
           ))}
         </div>
 
+        {lockedCategory && activeCategory?.subcategories?.length ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Subcategories">
+            <button type="button" onClick={() => navigate('category', { slug: lockedCategory })} className={chip(!lockedSub)}>
+              {t('catalog.all')}
+            </button>
+            {activeCategory.subcategories.map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => navigate('subcategory', { slug: lockedCategory, sub: sub.slug })}
+                className={`rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all ${
+                  lockedSub === sub.slug ? 'glass-btn glass-btn-orange text-white' : 'glass-btn glass-btn-ghost text-purple-200'
+                }`}
+              >
+                {sub.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="flex items-center gap-2 text-xs font-bold text-purple-200">
-            <SlidersHorizontal className="h-4 w-4 text-orange-300" aria-hidden />
             {t('catalog.sort')}
             <Select value={filters.sort} onValueChange={(value) => setFilter({ sort: value })}>
               <SelectTrigger className="h-10 rounded-full border-white/20 bg-white/5 text-sm font-semibold" aria-label={t('catalog.sort')}>
@@ -188,6 +209,23 @@ const CatalogView = ({ categories = [] }) => {
           </div>
         </div>
 
+        <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Badges">
+          <span className="text-xs font-bold text-purple-200">NEW / TOP / SALE</span>
+          {LABEL_FILTERS.map((label) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setFilter({ label: filters.label === label ? 'all' : label })}
+              aria-pressed={filters.label === label}
+              className={`rounded-full px-3 py-1.5 font-display text-xs font-bold uppercase transition-all ${
+                filters.label === label ? 'glass-btn glass-btn-orange text-white' : 'glass-btn glass-btn-ghost text-purple-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Sizes">
           <span className="text-xs font-bold text-purple-200">{t('catalog.sizes')}</span>
           {ALL_SIZES.map((size) => (
@@ -229,7 +267,14 @@ const CatalogView = ({ categories = [] }) => {
         <ProductGridSkeleton count={8} />
       ) : (
         <>
-          <ProductGrid products={items} />
+          {items.length === 0 ? (
+            <div className="glass-panel mx-auto max-w-xl p-10 text-center">
+              <p className="font-display text-xl font-bold text-white">{t('catalog.emptyTitle')}</p>
+              <p className="mt-2 text-sm font-semibold text-muted-foreground">{t('catalog.emptyText')}</p>
+            </div>
+          ) : (
+            <ProductGrid products={items} />
+          )}
 
           {/* Маркер бесконечной подгрузки */}
           <div ref={sentinelRef} className="h-2" aria-hidden />

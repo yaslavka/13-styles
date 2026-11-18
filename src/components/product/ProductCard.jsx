@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ShoppingCart, Star } from 'lucide-react'
 import { toast } from 'sonner'
@@ -22,8 +23,11 @@ const ProductCard = ({ product }) => {
   const addToCart = useCart((state) => state.add)
   const openCart = useCart((state) => state.open)
   const navigate = useShop((state) => state.navigate)
+  const href = useShop((state) => state.href)
   const locale = useShop((state) => state.locale)
   const t = useT()
+
+  // SEO: каждая карточка товара — настоящая ссылка /product/[slug]
 
   const images = product.images || []
   const soldOut = (product.stock ?? 0) <= 0
@@ -131,11 +135,10 @@ const ProductCard = ({ product }) => {
       </div>
 
       <div className="space-y-1.5 p-4">
-        <h3
-          className="truncate font-display text-lg font-bold text-white transition-colors group-hover:text-orange-300"
-          itemProp="name"
-        >
-          {product.name}
+        <h3 className="truncate font-display text-lg font-bold text-white transition-colors group-hover:text-orange-300" itemProp="name">
+          <Link href={href('product', { slug: product.slug })} className="hover:text-orange-300" aria-label={product.name}>
+            {product.name}
+          </Link>
         </h3>
         <p className="line-clamp-2 min-h-[2.6rem] text-sm font-semibold leading-relaxed text-muted-foreground" itemProp="description">
           {product.shortDesc}

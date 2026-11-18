@@ -17,10 +17,10 @@ const Footer = () => {
     {
       title: t('footer.catalog'),
       links: [
-        { label: t('footer.men'), action: () => navigate('catalog', { query: { category: 'men' } }) },
-        { label: t('footer.women'), action: () => navigate('catalog', { query: { category: 'women' } }) },
-        { label: t('footer.shoes'), action: () => navigate('catalog', { query: { category: 'shoes' } }) },
-        { label: t('footer.accessories'), action: () => navigate('catalog', { query: { category: 'accessories' } }) },
+        { label: t('footer.men'), action: () => navigate('category', { slug: 'men' }) },
+        { label: t('footer.women'), action: () => navigate('category', { slug: 'women' }) },
+        { label: t('footer.shoes'), action: () => navigate('category', { slug: 'shoes' }) },
+        { label: t('footer.accessories'), action: () => navigate('category', { slug: 'accessories' }) },
       ],
     },
     {

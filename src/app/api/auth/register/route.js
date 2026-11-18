@@ -16,7 +16,7 @@ const POST = async (request) => {
     const login = typeof body.login === 'string' ? body.login.trim().toLowerCase() : ''
     if (!USER_AUTH.isValidLogin(login)) {
       return NextResponse.json(
-        { error: 'Логин: 3–40 символов, только латиница, цифры и знаки _ . -' },
+        { error: `Логин: от ${USER_AUTH.MIN_LOGIN_LENGTH} до ${USER_AUTH.MAX_LOGIN_LENGTH} символов — любые буквы и цифры, сложность не требуется` },
         { status: 400 }
       )
     }

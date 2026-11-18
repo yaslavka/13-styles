@@ -1,37 +1,27 @@
-import { db } from '@/lib/db'
-import CACHE from '@/lib/cache'
-import DTO from '@/lib/dto'
-import { SITE_NAME, SITE_URL, AGE_LABEL } from '@/lib/constants'
-import AppShell from '@/components/layout/AppShell'
+import CATALOG_SERVER from '@/lib/catalog-server'
+import { SITE_NAME, SITE_URL } from '@/lib/constants'
+import HomeView from '@/components/home/HomeView'
 
-// Единственный пользовательский маршрут /. Серверная часть:
-// SSR начальных данных для SEO + JSON-LD структурированные данные.
+// Главная страница 13 STYLES: все категории товаров, по 8 товаров в каждой.
+// SSR-данные для SEO + JSON-LD структурированные данные.
+
+export const revalidate = 60
 
 const Page = async () => {
-  let initialCategories = []
-  let initialProducts = []
+  let sections = []
+  let categories = []
 
   try {
-    initialCategories = await CACHE.wrap('ssr:categories', 60000, async () => {
-      const rows = await db.category.findMany({
-        orderBy: { sort: 'asc' },
-        include: { _count: { select: { products: { where: { published: true, decor: false } } } } },
-      })
-      return rows.map((row) => DTO.toCategoryDTO(row, row._count ? row._count.products : 0))
-    })
-
-    initialProducts = await CACHE.wrap('ssr:featured', 20000, async () => {
-      const rows = await db.product.findMany({
-        where: { published: true, featured: true, decor: false },
-        include: { category: true },
-        orderBy: { createdAt: 'desc' },
-        take: 8,
-      })
-      return rows.map((row) => DTO.toProductDTO(row))
-    })
+    sections = await CATALOG_SERVER.getCategorySections(8)
+    categories = sections.map((section) => section.category)
   } catch (error) {
     console.error('[page] БД недоступна, показываем витрину без данных:', error?.message || error)
   }
+
+  const featured = sections
+    .flatMap((section) => section.products.map((product) => ({ ...product, categoryName: section.category.name })))
+    .sort((a, b) => (b.featured === true) - (a.featured === true) || b.rating - a.rating)
+    .slice(0, 8)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -41,7 +31,7 @@ const Page = async () => {
         '@id': `${SITE_URL}#organization`,
         name: SITE_NAME,
         url: SITE_URL,
-        description: `A cartoon-real marketplace for clothing, shoes and accessories for ${AGE_LABEL}`,
+        description: 'A cartoon-real marketplace for clothing, shoes and accessories for ages 16–50.',
       },
       {
         '@type': 'WebSite',
@@ -49,14 +39,20 @@ const Page = async () => {
         url: SITE_URL,
         name: SITE_NAME,
         inLanguage: 'en',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${SITE_URL}/catalog?search={search_term_string}`,
+          'query-input': 'required name=search_term_string',
+        },
         publisher: { '@id': `${SITE_URL}#organization` },
       },
       {
         '@type': 'ItemList',
-        name: 'Top picks 13 STYLES',
-        itemListElement: initialProducts.slice(0, 8).map((product, index) => ({
+        name: `Top picks ${SITE_NAME}`,
+        itemListElement: featured.map((product, index) => ({
           '@type': 'ListItem',
           position: index + 1,
+          url: `${SITE_URL}/product/${product.slug}`,
           item: {
             '@type': 'Product',
             name: product.name,
@@ -65,7 +61,7 @@ const Page = async () => {
             offers: {
               '@type': 'Offer',
               price: product.price,
-              priceCurrency: 'RUB',
+              priceCurrency: 'EUR',
               availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
             },
           },
@@ -76,11 +72,8 @@ const Page = async () => {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <AppShell initialProducts={initialProducts} initialCategories={initialCategories} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <HomeView sections={sections} categories={categories} />
     </>
   )
 }

@@ -31,13 +31,14 @@ const Header = () => {
   const cartOpen = useCart((state) => state.open)
   const t = useT()
 
-  // Кнопка «Главная» в навигации не нужна: логотип уже ведёт на главную
+  // Кнопка «Главная» в навигации не нужна: логотип уже ведёт на главную.
+  // Категории ведут на SEO-страницы /catalog/category/[slug]
   const navLinks = [
     { key: 'nav.catalog', view: 'catalog' },
-    { key: 'nav.men', view: 'catalog', query: { category: 'men' } },
-    { key: 'nav.women', view: 'catalog', query: { category: 'women' } },
-    { key: 'nav.shoes', view: 'catalog', query: { category: 'shoes' } },
-    { key: 'nav.accessories', view: 'catalog', query: { category: 'accessories' } },
+    { key: 'nav.men', view: 'category', slug: 'men' },
+    { key: 'nav.women', view: 'category', slug: 'women' },
+    { key: 'nav.shoes', view: 'category', slug: 'shoes' },
+    { key: 'nav.accessories', view: 'category', slug: 'accessories' },
     { key: 'nav.styles', view: 'styles' },
   ]
 
@@ -45,7 +46,7 @@ const Header = () => {
 
   const go = (link) => {
     setMobileOpen(false)
-    navigate(link.view, { query: link.query || {} })
+    navigate(link.view, { slug: link.slug || '', query: link.query || {} })
   }
 
   const submitSearch = (event) => {

@@ -79,10 +79,8 @@ const AdminSidebar = ({ active }) => {
   )
 }
 
-const AdminPanel = () => {
-  const route = useShop((state) => state.route)
+const AdminPanel = ({ section = '', editId = '' }) => {
   const navigate = useShop((state) => state.navigate)
-  const section = route.slug || ''
 
   const renderSection = () => {
     switch (section) {
@@ -93,7 +91,7 @@ const AdminPanel = () => {
       case 'subcategories':
         return <AdminSubcategories />
       case 'product-new':
-        return <AdminProductFormPage editId={route.query.id || ''} />
+        return <AdminProductFormPage editId={editId} />
       case 'orders':
         return <AdminOrders />
       case 'users':
@@ -139,9 +137,9 @@ const AdminPanel = () => {
   )
 }
 
-const AdminView = () => (
+const AdminView = ({ section = '', editId = '' }) => (
   <AdminAuth>
-    <AdminPanel />
+    <AdminPanel section={section} editId={editId} />
   </AdminAuth>
 )
 

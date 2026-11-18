@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, ShoppingCart, Star, Truck, RotateCcw, Loader2, ShieldCheck, ZoomIn } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, Star, Truck, RotateCcw, ShieldCheck, ZoomIn } from 'lucide-react'
 import { toast } from 'sonner'
-import API from '@/lib/api'
-import { Skeleton } from '@/components/ui/skeleton'
 import useShop from '@/store/useShop'
 import useCart from '@/store/useCart'
 import useHoverSlider from '@/hooks/useHoverSlider'
@@ -18,55 +17,37 @@ import GlassButton from '@/components/motion/GlassButton'
 import ProductGrid from '@/components/product/ProductGrid'
 import Reveal from '@/components/motion/Reveal'
 
-// Детальная страница товара: скользящая галерея с зум-лайтбоксом, размеры, количество, характеристики
+// Детальная страница товара: данные приходят с сервера (SSR — SEO-ready),
+// скользящая галерея с зум-лайтбоксом, размеры, количество, характеристики
 
-const ProductView = () => {
-  const route = useShop((state) => state.route)
+const ProductView = ({ product, related = [] }) => {
   const navigate = useShop((state) => state.navigate)
+  const href = useShop((state) => state.href)
   const locale = useShop((state) => state.locale)
   const addToCart = useCart((state) => state.add)
   const openCart = useCart((state) => state.open)
   const t = useT()
 
-  const [product, setProduct] = useState(null)
-  const [related, setRelated] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [size, setSize] = useState('')
+  const [size, setSize] = useState((product?.sizes || [])[0] || '')
   const [qty, setQty] = useState(1)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
 
+  // Сброс выбора при переходе на другой товар (клиентская навигация между карточками):
+  // подстройка состояния прямо в рендере — без каскадных ререндеров
+  const [lastProductId, setLastProductId] = useState(product?.id)
+  if (lastProductId !== product?.id) {
+    setLastProductId(product?.id)
+    setSize((product?.sizes || [])[0] || '')
+    setQty(1)
+    setLightboxOpen(false)
+  }
+
   const { index, hovering, handlers, setIndex, hasMultiple, progress } = useHoverSlider(product?.images || [])
 
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const data = await API.get(`/api/products/${encodeURIComponent(route.slug)}`)
-        if (cancelled) return
-        setProduct(data.product)
-        setSize((data.product.sizes || [])[0] || '')
-        setQty(1)
-        if (data.product.category?.slug) {
-          const relatedData = await API.get(`/api/products?category=${data.product.category.slug}&limit=4&offset=0`)
-          if (!cancelled) setRelated((relatedData.items || []).filter((item) => item.id !== data.product.id).slice(0, 4))
-        }
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Not found')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [route.slug])
+  if (!product) return null
 
-  const soldOut = !product || (product.stock ?? 0) <= 0
+  const soldOut = (product.stock ?? 0) <= 0
 
   const handleAdd = (openAfter) => {
     if (soldOut) {
@@ -90,59 +71,36 @@ const ProductView = () => {
     setLightboxOpen(true)
   }
 
-  if (loading) {
-    return (
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2" aria-hidden>
-        <div className="glass-card overflow-hidden rounded-[1.8rem]">
-          <Skeleton className="aspect-square w-full rounded-none bg-white/10" />
-          <div className="mt-4 grid grid-cols-3 gap-4 px-4">
-            <Skeleton className="aspect-square rounded-2xl bg-white/10" />
-            <Skeleton className="aspect-square rounded-2xl bg-white/10" />
-            <Skeleton className="aspect-square rounded-2xl bg-white/10" />
-          </div>
-        </div>
-        <div className="space-y-5">
-          <div className="flex gap-2">
-            <Skeleton className="h-7 w-28 rounded-full bg-white/10" />
-            <Skeleton className="h-7 w-24 rounded-full bg-white/10" />
-          </div>
-          <Skeleton className="h-12 w-3/4 rounded-2xl bg-white/10" />
-          <Skeleton className="h-4 w-full rounded-2xl bg-white/10" />
-          <Skeleton className="h-4 w-2/3 rounded-2xl bg-white/10" />
-          <Skeleton className="h-10 w-40 rounded-2xl bg-white/10" />
-          <div className="flex gap-3 pt-2">
-            <Skeleton className="h-12 w-36 rounded-full bg-white/10" />
-            <Skeleton className="h-12 w-36 rounded-full bg-white/10" />
-          </div>
-          <Skeleton className="h-44 w-full rounded-2xl bg-white/10" />
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !product) {
-    return (
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-5 px-4 py-24 text-center">
-        <span className="font-display text-5xl text-orange-400/80 animate-blink">✦ ✧ ✦</span>
-        <h1 className="font-display text-3xl font-bold text-white">{error || 'Not found'}</h1>
-        <GlassButton tone="primary" onClick={() => navigate('catalog')}>
-          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden /> {t('product.back')}
-        </GlassButton>
-      </div>
-    )
-  }
-
   const images = product.images || []
+  const categoryHref = product.category
+    ? href('subcategory', { slug: product.category.slug, sub: product.subcategory?.slug || '' })
+    : href('catalog')
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <button
-        type="button"
-        onClick={() => navigate('catalog')}
-        className="mb-6 flex items-center gap-1.5 font-display text-sm font-bold text-purple-300 transition-colors hover:text-orange-300"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden /> {t('product.back')}
-      </button>
+      {/* Хлебные крошки (SEO + навигация) */}
+      <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-sm font-bold">
+        <Link href={href('home')} className="text-purple-300 transition-colors hover:text-orange-300">
+          13 STYLES
+        </Link>
+        <span className="text-purple-500/60" aria-hidden>/</span>
+        <Link
+          href={product.category ? href('category', { slug: product.category.slug }) : href('catalog')}
+          className="text-purple-300 transition-colors hover:text-orange-300"
+        >
+          {product.category?.name || t('catalog.title')}
+        </Link>
+        {product.subcategory ? (
+          <>
+            <span className="text-purple-500/60" aria-hidden>/</span>
+            <Link href={categoryHref} className="text-purple-300 transition-colors hover:text-orange-300">
+              {product.subcategory.name}
+            </Link>
+          </>
+        ) : null}
+        <span className="text-purple-500/60" aria-hidden>/</span>
+        <span className="text-purple-100">{product.name}</span>
+      </nav>
 
       <div className="grid gap-10 lg:grid-cols-2">
         <div onMouseEnter={handlers.onMouseEnter} onMouseLeave={handlers.onMouseLeave}>
@@ -226,9 +184,12 @@ const ProductView = () => {
 
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="glass-btn glass-btn-ghost rounded-full px-3.5 py-1.5 font-display text-xs font-bold text-purple-200">
+            <Link
+              href={product.category ? href('category', { slug: product.category.slug }) : href('catalog')}
+              className="glass-btn glass-btn-ghost rounded-full px-3.5 py-1.5 font-display text-xs font-bold text-purple-200"
+            >
               {product.category?.name || t('catalog.title')}
-            </span>
+            </Link>
             {product.gender !== 'unisex' ? (
               <span className="glass-btn glass-btn-ghost rounded-full px-3.5 py-1.5 font-display text-xs font-bold text-orange-200">
                 {product.gender === 'men' ? t('product.men') : t('product.women')}

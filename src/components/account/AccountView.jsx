@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Settings, ReceiptText, CreditCard, Loader2, Plus, Trash2, UserRound, Star, PackageOpen, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
@@ -365,15 +366,19 @@ const AccountView = () => {
   const setAuthOpen = useAuth((state) => state.setAuthOpen)
   const logout = useAuth((state) => state.logout)
   const navigate = useShop((state) => state.navigate)
-  const route = useShop((state) => state.route)
+  const searchParams = useSearchParams()
   const t = useT()
 
-  // Таб можно открыть напрямую: #/account?tab=orders | payments
+  // Таб можно открыть напрямую: /account?tab=orders | payments
   const VALID_TABS = ['settings', 'orders', 'payments']
-  const initialTab = VALID_TABS.includes(route.query.tab) ? route.query.tab : 'settings'
+  const tabParam = searchParams.get('tab')
+  const initialTab = VALID_TABS.includes(tabParam) ? tabParam : 'settings'
   const [tab, setTab] = useState(initialTab)
-  if (route.query.tab && route.query.tab !== tab && VALID_TABS.includes(route.query.tab)) {
-    setTab(route.query.tab)
+  // Подстройка состояния в рендере при смене ?tab= (без каскадных ререндеров)
+  const [lastTabParam, setLastTabParam] = useState(tabParam)
+  if (tabParam !== lastTabParam) {
+    setLastTabParam(tabParam)
+    if (tabParam && VALID_TABS.includes(tabParam)) setTab(tabParam)
   }
 
   if (!user) {

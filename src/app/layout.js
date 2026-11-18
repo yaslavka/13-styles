@@ -2,8 +2,11 @@ import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { SITE_NAME, SITE_URL } from '@/lib/constants'
+import AppShell from '@/components/layout/AppShell'
 
-// SEO-метаданные витрины 13 STYLES (английские — базовый язык витрины; админ-панель на русском)
+// Корневой layout 13 STYLES: SEO-метаданные витрины (английские — базовый язык
+// витрины; админ-панель на русском) + клиентская оболочка AppShell.
+
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -64,7 +67,7 @@ export const viewport = {
 const RootLayout = ({ children }) => (
   <html lang="en" className="dark" suppressHydrationWarning>
     <body className="min-h-screen antialiased bg-background text-foreground">
-      {children}
+      <AppShell>{children}</AppShell>
       <Toaster />
       <Sonner position="top-center" richColors closeButton />
     </body>

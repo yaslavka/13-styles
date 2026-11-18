@@ -254,5 +254,13 @@
   "toast.added": "Added to cart",
   "toast.orderPlaced": "Order placed!",
   "toast.orderCode": "Number: {code}",
-  "toast.loadError": "Failed to load the catalog"
+  "toast.loadError": "Failed to load the catalog",
+  "catalog.subcategories": "Subcategories",
+  "catalog.filters": "Filters",
+  "catalog.applyFilters": "Apply filters",
+  "catalog.clearFilters": "Clear all",
+  "catalog.showResults": "Show results",
+  "catalog.categories": "Categories",
+  "category.subcategories": "Subcategories",
+  "category.allSubcategories": "All subcategories"
 }

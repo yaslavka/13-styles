@@ -1,31 +1,25 @@
 'use client'
 
-import { useEffect, Suspense } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import useShop from '@/store/useShop'
-import useCart from '@/store/useCart'
-import useAuth from '@/store/useAuth'
+import { useEffect } from 'react'
 import AnimatedBackground from '@/components/layout/AnimatedBackground'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import CartSheet from '@/components/cart/CartSheet'
 import ChatWidget from '@/components/chat/ChatWidget'
 import UserAuthDialog from '@/components/auth/UserAuthDialog'
-import HomeView from '@/components/home/HomeView'
-import CatalogView from '@/components/catalog/CatalogView'
-import ProductView from '@/components/product/ProductView'
-import CheckoutView from '@/components/cart/CheckoutView'
-import AccountView from '@/components/account/AccountView'
-import StylesView from '@/components/styles/StylesView'
-import AdminView from '@/components/admin/AdminView'
+import useShop from '@/store/useShop'
+import useCart from '@/store/useCart'
+import useAuth from '@/store/useAuth'
+import { usePathname } from 'next/navigation'
 
-// Оболочка приложения: SPA-маршрутизация по хэшу внутри единственного маршрута /
-// Header + анимированные переходы видов + прижатый футер (min-h-screen flex + mt-auto)
+// Оболочка приложения (клиентская): шапка, анимированный фон, прижатый футер,
+// глобальные оверлеи (корзина, чат, авторизация). Сами виды рендерятся
+// реальными маршрутами App Router и приходят как children.
 
-const AppShell = ({ initialProducts = [], initialCategories = [] }) => {
-  const route = useShop((state) => state.route)
-  const syncRoute = useShop((state) => state.syncRoute)
+const AppShell = ({ children }) => {
+  const attachRouter = useShop((state) => state.attachRouter)
   const initLocale = useShop((state) => state.initLocale)
+  const pathname = usePathname()
 
   useEffect(() => {
     // Отложенная регидратация персист-состояний: первый рендер совпадает с SSR,
@@ -34,62 +28,22 @@ const AppShell = ({ initialProducts = [], initialCategories = [] }) => {
     useCart.persist.rehydrate()
     useAuth.persist.rehydrate()
     useAuth.getState().init()
-    syncRoute()
     initLocale()
-    const onHashChange = () => syncRoute()
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [syncRoute, initLocale])
-
-  const renderView = () => {
-    switch (route.view) {
-      case 'catalog':
-        return <CatalogView categories={initialCategories} />
-      case 'product':
-        return <ProductView />
-      case 'checkout':
-        return <CheckoutView />
-      case 'account':
-        return <AccountView />
-      case 'styles':
-        return <StylesView />
-      case 'admin':
-        return <AdminView />
-      default:
-        return <HomeView initialProducts={initialProducts} initialCategories={initialCategories} />
-    }
-  }
-
-  const transitionKey = route.view === 'product' ? `product-${route.slug}` : route.view
-
-  // Сброс скролла при переходе между видами
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' })
-  }, [transitionKey])
+  }, [initLocale])
 
   return (
     <div className="relative flex min-h-screen flex-col">
       <AnimatedBackground />
       <Header />
       <main className="flex-1" id="main-content">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={transitionKey}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
-            <Suspense>
-              {renderView()}
-            </Suspense>
-          </motion.div>
-        </AnimatePresence>
+        {children}
       </main>
       <Footer />
       <CartSheet />
       <ChatWidget />
       <UserAuthDialog />
+      {/* Скрытый маркер маршрута для e2e-проверок и скролла наверх при смене страницы */}
+      <span className="sr-only" data-testid="current-path" aria-hidden>{pathname}</span>
     </div>
   )
 }
