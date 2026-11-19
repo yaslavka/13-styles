@@ -62,3 +62,14 @@ process.on('uncaughtException', (err) => logCrash('НЕПЕРЕХВАЧЕННО�
 process.on('unhandledRejection', (err) => logCrash('ОТКЛОНЁННЫЙ ПРОМИС', err))
 
 require(serverPath)
+
+// Next.js во время require() подменяет Error.prepareStackTrace своим патчем
+// (node-environment-extensions/error-inspect.js) и сворачивает внутренние кадры
+// в «at ignore-listed frames». Краш ловится собственным .catch генерируемого
+// server.js и печатается ПОСЛЕ require — поэтому переприсваиваем сырой
+// форматтер здесь: в логе pm2 будут реальные пути файлов и функции.
+Error.prepareStackTrace = (err, frames) => [
+  `${err.name}: ${err.message}`,
+  ...frames.map((frame) => `    at ${frame}`),
+].join('\n')
+console.log('[start-web] диагностика стека активна — падения будут с реальными кадрами')
