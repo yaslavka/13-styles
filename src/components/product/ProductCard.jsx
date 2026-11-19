@@ -9,6 +9,7 @@ import useCart from '@/store/useCart'
 import useShop from '@/store/useShop'
 import useT from '@/hooks/useT'
 import { styleGradient } from '@/lib/constants'
+import { productImageAlt } from '@/lib/dto'
 import ProductBadges from '@/components/product/ProductBadges'
 import SmartImage from '@/components/product/SmartImage'
 import PriceTag from '@/components/motion/PriceTag'
@@ -72,7 +73,7 @@ const ProductCard = ({ product }) => {
             <div key={src} className="relative h-full w-full shrink-0">
               <SmartImage
                 src={src}
-                alt={`${product.name} — ${slideIndex + 1}`}
+                alt={productImageAlt(product, slideIndex)}
                 className={`h-full w-full object-cover transition-transform duration-[600ms] ease-out ${
                   hovering && hasMultiple ? 'scale-[1.07]' : 'scale-100'
                 }`}

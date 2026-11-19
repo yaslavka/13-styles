@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ExternalLink, Loader2, CreditCard, BadgeCheck, Copy, Wallet } from 'lucide-react'
+import { ExternalLink, Loader2, CreditCard, BadgeCheck, Copy, Wallet, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useShop from '@/store/useShop'
@@ -16,7 +16,10 @@ import { Label } from '@/components/ui/label'
 
 // Оплата одной позиции корзины: у каждого товара своя кнопка «Оплатить».
 // Товар со включённой собственной ссылкой открывает paymentUrl продавца,
-// остальные проходят через общую платёжную систему.
+// остальные проходят через общую платёжную систему DOKU.
+// ЗАКРЫТИЕ ДИАЛОГА никогда не удаляет товар из корзины: позиция уходит
+// только после успешной оплаты (страница /payment/result) или по кнопке
+// удаления в корзине.
 
 const CONTACT_STORAGE_KEY = 'styles-pay-contact'
 
@@ -42,7 +45,8 @@ const PayItemDialog = ({ item, onClose }) => {
   const byLink = item?.customPayment === true && item?.paymentUrl
   const itemTotal = item ? item.price * item.qty : 0
 
-  // Не даём оплачивать пустоту: если позиция исчезла — закрываемся
+  // Не даём оплачивать пустоту: если позиция исчезла — закрываемся.
+  // ВАЖНО: onClose лишь закрывает диалог и НЕ трогает корзину.
   useEffect(() => {
     if (!item) onClose()
   }, [item, onClose])
@@ -93,10 +97,10 @@ const PayItemDialog = ({ item, onClose }) => {
     setDokuLoading(true)
     try {
       const data = await API.post('/api/payments/doku/create', { orderCode: done.code })
-      toast.success(`Сумма к оплате: ${data.amountIdr.toLocaleString('ru-RU')} IDR (курс ${data.rate})`)
+      toast.success(t('pay.dokuAmount', { amount: data.amountIdr.toLocaleString('en-US'), rate: data.rate }))
       window.location.href = data.paymentUrl
     } catch (err) {
-      toast.error('Не удалось открыть оплату DOKU', { description: err.message })
+      toast.error(t('pay.dokuError'), { description: err.message })
     } finally {
       setDokuLoading(false)
     }
@@ -106,10 +110,13 @@ const PayItemDialog = ({ item, onClose }) => {
 
   return (
     <Dialog open onOpenChange={(open) => (open ? null : onClose())}>
-      <DialogContent aria-describedby={undefined} className="max-w-md rounded-3xl border-purple-500/30 bg-[#0a0918]">
-        <DialogHeader>
+      <DialogContent
+        aria-describedby={undefined}
+        className="flex max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-md flex-col gap-4 overflow-y-auto rounded-3xl border-purple-500/30 bg-[#0a0918] p-4 sm:p-6"
+      >
+        <DialogHeader className="pr-8 text-left">
           <DialogTitle className="flex items-center gap-2 font-display text-purple-100">
-            <CreditCard className="h-5 w-5 text-orange-300" aria-hidden />
+            <CreditCard className="h-5 w-5 shrink-0 text-orange-300" aria-hidden />
             {done ? t('pay.doneTitle') : t('pay.title', { name: item.name })}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
@@ -127,20 +134,20 @@ const PayItemDialog = ({ item, onClose }) => {
               <Copy className="h-4 w-4" aria-hidden /> {done.code}
             </p>
             {payUrl ? (
-              <GlassButton tone="primary" className="h-12 w-full text-base" onClick={openPayLink}>
+              <GlassButton tone="primary" className="h-12 min-h-11 w-full text-base" onClick={openPayLink}>
                 <ExternalLink className="mr-2 h-4 w-4" aria-hidden /> {t('pay.openLink')}
               </GlassButton>
             ) : null}
             {!byLink ? (
-              <GlassButton tone="primary" className="h-12 w-full text-base" onClick={payWithDoku} disabled={dokuLoading}>
+              <GlassButton tone="primary" className="h-12 min-h-11 w-full text-base" onClick={payWithDoku} disabled={dokuLoading}>
                 {dokuLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden /> : <Wallet className="mr-2 h-4 w-4" aria-hidden />}
-                Оплатить через DOKU
+                {t('pay.dokuButton')}
               </GlassButton>
             ) : null}
             {!payUrl && byLink ? (
               <p className="text-sm font-semibold text-muted-foreground">{t('pay.doneNote')}</p>
             ) : null}
-            <GlassButton tone="ghost" className="h-11 w-full" onClick={onClose}>
+            <GlassButton tone="ghost" className="h-11 min-h-11 w-full" onClick={onClose}>
               {t('pay.close')}
             </GlassButton>
           </div>
@@ -168,17 +175,17 @@ const PayItemDialog = ({ item, onClose }) => {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 text-left">
                 <Label htmlFor="pay-name" className="text-xs text-purple-200">{t('checkout.name')}</Label>
-                <Input id="pay-name" required minLength={2} maxLength={80} value={form.customer} onChange={updateField('customer')} placeholder={t('checkout.namePh')} className="rounded-2xl border-white/20 bg-white/5" />
+                <Input id="pay-name" required minLength={2} maxLength={80} value={form.customer} onChange={updateField('customer')} placeholder={t('checkout.namePh')} className="min-h-11 rounded-2xl border-white/20 bg-white/5" />
               </div>
               <div className="space-y-1.5 text-left">
                 <Label htmlFor="pay-phone" className="text-xs text-purple-200">{t('checkout.phone')}</Label>
-                <Input id="pay-phone" required minLength={5} maxLength={20} value={form.phone} onChange={updateField('phone')} placeholder={t('checkout.phonePh')} className="rounded-2xl border-white/20 bg-white/5" />
+                <Input id="pay-phone" required minLength={5} maxLength={20} inputMode="tel" value={form.phone} onChange={updateField('phone')} placeholder={t('checkout.phonePh')} className="min-h-11 rounded-2xl border-white/20 bg-white/5" />
               </div>
             </div>
 
             <div className="space-y-1.5 text-left">
               <Label htmlFor="pay-address" className="text-xs text-purple-200">{t('checkout.address')}</Label>
-              <Input id="pay-address" required minLength={2} maxLength={200} value={form.address} onChange={updateField('address')} placeholder={t('checkout.addressPh')} className="rounded-2xl border-white/20 bg-white/5" />
+              <Input id="pay-address" required minLength={2} maxLength={200} value={form.address} onChange={updateField('address')} placeholder={t('checkout.addressPh')} className="min-h-11 rounded-2xl border-white/20 bg-white/5" />
             </div>
 
             <div className="space-y-1.5 text-left">
@@ -190,12 +197,22 @@ const PayItemDialog = ({ item, onClose }) => {
               <p className="rounded-2xl border border-orange-500/40 bg-orange-500/10 px-4 py-3 text-xs font-bold text-orange-200">
                 {t('pay.byLinkNote')}
               </p>
-            ) : null}
+            ) : (
+              <p className="flex items-center justify-center gap-2 text-[11px] font-semibold text-purple-200/70">
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden /> {t('pay.secure')}
+              </p>
+            )}
 
-            <GlassButton type="submit" tone="primary" className="h-12 w-full text-lg" disabled={submitting}>
-              {submitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden /> : <CreditCard className="mr-2 h-4 w-4" aria-hidden />}
-              {t('pay.submit', { amount: formatPrice(itemTotal, locale) })}
-            </GlassButton>
+            {/* Кнопки формы:submit на всю ширину, «Отмена» по кнопке закрытия — как положено в форме */}
+            <div className="space-y-2.5">
+              <GlassButton type="submit" tone="primary" className="h-12 min-h-11 w-full text-lg" disabled={submitting}>
+                {submitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden /> : <CreditCard className="mr-2 h-4 w-4" aria-hidden />}
+                {t('pay.submit', { amount: formatPrice(itemTotal, locale) })}
+              </GlassButton>
+              <GlassButton type="button" tone="ghost" className="h-11 min-h-11 w-full" onClick={onClose} disabled={submitting}>
+                {t('pay.cancel')}
+              </GlassButton>
+            </div>
           </form>
         )}
       </DialogContent>

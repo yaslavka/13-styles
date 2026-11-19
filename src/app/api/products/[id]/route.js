@@ -14,10 +14,10 @@ const GET = async (request, context) => {
     const id = typeof params?.id === 'string' ? params.id.trim() : ''
 
     if (id.length === 0) {
-      return NextResponse.json({ error: 'Не указан идентификатор товара' }, { status: 400 })
+      return NextResponse.json({ error: 'Product identifier is missing' }, { status: 400 })
     }
     if (id.length > MAX_PARAM_LENGTH) {
-      return NextResponse.json({ error: 'Идентификатор товара слишком длинный' }, { status: 400 })
+      return NextResponse.json({ error: 'Product identifier is too long' }, { status: 400 })
     }
 
     const isNumeric = /^\d+$/.test(id)
@@ -25,7 +25,7 @@ const GET = async (request, context) => {
 
     // Слишком большие числа не могут быть id (Int в SQLite) — сразу «не найдено»
     if (numericId !== null && (!Number.isSafeInteger(numericId) || numericId > MAX_INT_ID)) {
-      return NextResponse.json({ error: 'Товар не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
     const row = await db.product.findFirst({
@@ -34,13 +34,13 @@ const GET = async (request, context) => {
     })
 
     if (!row) {
-      return NextResponse.json({ error: 'Товар не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
     return NextResponse.json({ product: DTO.toProductDTO(row) })
   } catch (error) {
     console.error('[api/products/[id]] ошибка загрузки товара:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось загрузить товар' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not load the product' }, { status: 500 })
   }
 }
 

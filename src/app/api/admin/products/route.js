@@ -102,6 +102,7 @@ const POST = async (request) => {
         sizes: JSON.stringify(PAYLOAD.cleanStringArray(body.sizes, 12)),
         colors: JSON.stringify(PAYLOAD.cleanStringArray(body.colors)),
         images: JSON.stringify(PAYLOAD.cleanStringArray(body.images, 8)),
+        imageAlts: JSON.stringify(PAYLOAD.cleanAltArray(body.imageAlts, 8)),
         stock: PAYLOAD.normalizeStock(body.stock),
         rating: PAYLOAD.normalizeRating(body.rating),
         reviews: PAYLOAD.normalizeReviews(body.reviews),

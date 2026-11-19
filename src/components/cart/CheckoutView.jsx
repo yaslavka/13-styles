@@ -40,10 +40,10 @@ const CheckoutView = () => {
     setDokuLoading(true)
     try {
       const data = await API.post('/api/payments/doku/create', { orderCode: done.code })
-      toast.success(`Сумма к оплате: ${data.amountIdr.toLocaleString('ru-RU')} IDR (курс ${data.rate})`)
+      toast.success(t('pay.dokuAmount', { amount: data.amountIdr.toLocaleString('en-US'), rate: data.rate }))
       window.location.href = data.paymentUrl
     } catch (err) {
-      toast.error('Не удалось открыть оплату DOKU', { description: err.message })
+      toast.error(t('pay.dokuError'), { description: err.message })
     } finally {
       setDokuLoading(false)
     }
@@ -93,7 +93,7 @@ const CheckoutView = () => {
         <div className="flex flex-wrap justify-center gap-4">
           <GlassButton tone="primary" onClick={payWithDoku} disabled={dokuLoading}>
             {dokuLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Wallet className="mr-2 h-4 w-4" aria-hidden />}
-            Оплатить через DOKU
+            {t('pay.dokuButton')}
           </GlassButton>
           <GlassButton tone="ghost" onClick={() => setChatOpen(true)}>
             <MessageCircle className="mr-2 h-4 w-4" aria-hidden /> {t('checkout.done.chat')}

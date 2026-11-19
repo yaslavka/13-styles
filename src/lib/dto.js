@@ -49,6 +49,8 @@ const toProductDTO = (row) => ({
   sizes: parseJsonArray(row.sizes),
   colors: parseJsonArray(row.colors),
   images: parseJsonArray(row.images),
+  // SEO alt-тексты изображений: параллельный массив к images (пустые — fallback)
+  imageAlts: parseJsonArray(row.imageAlts),
   label: row.label,
   stock: row.stock,
   rating: row.rating,
@@ -112,5 +114,17 @@ const toPaymentMethodDTO = (row) => ({
 })
 
 const DTO = { toProductDTO, toCategoryDTO, toSubcategoryDTO, toOrderDTO, toUserDTO, toAdminUserDTO, toPaymentMethodDTO }
+
+// SEO alt для изображения товара: админский alt > авто-генерация.
+// Авто-альт содержит бренд, название и номер фото — так изображения
+// индексируются Google Images по каждому товару.
+export const productImageAlt = (product, index = 0) => {
+  const explicit = Array.isArray(product?.imageAlts) ? (product.imageAlts[index] || '').trim() : ''
+  if (explicit) return explicit
+  const name = String(product?.name || '').trim() || '13 STYLES product'
+  const brand = String(product?.brand || '').trim()
+  const base = brand ? `${brand} ${name}` : name
+  return index > 0 ? `${base} — 13 STYLES photo ${index + 1}` : `${base} — buy online at 13 STYLES`
+}
 
 export default DTO

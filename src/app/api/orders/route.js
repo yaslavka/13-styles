@@ -12,7 +12,7 @@ const MAX_PHONE_LENGTH = 20
 const MAX_COMMENT_LENGTH = 500
 const MAX_ORDER_ITEMS = 30
 const MAX_QTY = 20
-const OUT_OF_STOCK_PREFIX = 'Недостаточно товара на складе'
+const OUT_OF_STOCK_PREFIX = 'Not enough stock for'
 const PAYMENT_MODES = ['system', 'link']
 
 const badRequest = (message) => NextResponse.json({ error: message }, { status: 400 })
@@ -34,7 +34,7 @@ const POST = async (request) => {
   try {
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== 'object') {
-      return badRequest('Некорректное тело запроса')
+      return badRequest('Invalid request body')
     }
 
     const customer = typeof body.customer === 'string' ? body.customer.trim() : ''
@@ -43,21 +43,21 @@ const POST = async (request) => {
     const comment = typeof body.comment === 'string' ? body.comment.trim().slice(0, MAX_COMMENT_LENGTH) : ''
 
     if (customer.length < MIN_TEXT_LENGTH || customer.length > MAX_TEXT_LENGTH) {
-      return badRequest(`Укажите имя получателя (от ${MIN_TEXT_LENGTH} до ${MAX_TEXT_LENGTH} символов)`)
+      return badRequest(`Recipient name must be ${MIN_TEXT_LENGTH}–${MAX_TEXT_LENGTH} characters`)
     }
     if (phone.length < MIN_PHONE_LENGTH || phone.length > MAX_PHONE_LENGTH) {
-      return badRequest(`Укажите телефон (от ${MIN_PHONE_LENGTH} до ${MAX_PHONE_LENGTH} символов)`)
+      return badRequest(`Phone number must be ${MIN_PHONE_LENGTH}–${MAX_PHONE_LENGTH} characters`)
     }
     if (address.length < MIN_TEXT_LENGTH || address.length > MAX_TEXT_LENGTH) {
-      return badRequest(`Укажите адрес доставки (от ${MIN_TEXT_LENGTH} до ${MAX_TEXT_LENGTH} символов)`)
+      return badRequest(`Delivery address must be ${MIN_TEXT_LENGTH}–${MAX_TEXT_LENGTH} characters`)
     }
 
     const rawItems = Array.isArray(body.items) ? body.items : []
     if (rawItems.length === 0) {
-      return badRequest('Корзина пуста: добавьте хотя бы один товар')
+      return badRequest('Cart is empty: add at least one item')
     }
     if (rawItems.length > MAX_ORDER_ITEMS) {
-      return badRequest(`В одном заказе не может быть больше ${MAX_ORDER_ITEMS} позиций`)
+      return badRequest(`An order cannot contain more than ${MAX_ORDER_ITEMS} items`)
     }
 
     // Режим оплаты: system — общая платёжная система, link — оплата по собственной
@@ -75,11 +75,11 @@ const POST = async (request) => {
     for (const raw of rawItems) {
       const productId = Number(raw?.productId)
       if (!Number.isInteger(productId) || productId <= 0) {
-        return badRequest('В корзине указан некорректный товар')
+        return badRequest('Your cart contains an unavailable product')
       }
       const qty = Number(raw?.qty)
       if (!Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) {
-        return badRequest(`Количество товара должно быть целым числом от 1 до ${MAX_QTY}`)
+        return badRequest(`Quantity must be a whole number from 1 to ${MAX_QTY}`)
       }
       const size = raw?.size === undefined || raw?.size === null ? '' : String(raw.size)
       cartItems.push({ productId, qty, size: size.slice(0, 50) })
@@ -93,7 +93,7 @@ const POST = async (request) => {
 
     for (const item of cartItems) {
       if (!productsById.has(item.productId)) {
-        return badRequest('Некоторые товары из корзины больше недоступны')
+        return badRequest('Some items in your cart are no longer available')
       }
     }
 
@@ -150,7 +150,7 @@ const POST = async (request) => {
         return badRequest(message)
       }
       console.error('[api/orders] ошибка транзакции заказа:', txError?.message || txError)
-      return NextResponse.json({ error: 'Не удалось оформить заказ. Попробуйте позже' }, { status: 500 })
+      return NextResponse.json({ error: 'Could not place the order. Please try again later' }, { status: 500 })
     }
 
     await CACHE.invalidatePrefix('admin-stats')
@@ -161,7 +161,7 @@ const POST = async (request) => {
     )
   } catch (error) {
     console.error('[api/orders] ошибка оформления заказа:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось оформить заказ. Попробуйте позже' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not place the order. Please try again later' }, { status: 500 })
   }
 }
 

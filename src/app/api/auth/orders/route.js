@@ -31,7 +31,7 @@ const GET = async (request) => {
     return NextResponse.json({ items, ...PAGINATION.pageMeta(items, total, offset) })
   } catch (error) {
     console.error('[api/auth/orders] ошибка загрузки истории заказов:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось загрузить историю заказов' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not load the order history' }, { status: 500 })
   }
 }
 

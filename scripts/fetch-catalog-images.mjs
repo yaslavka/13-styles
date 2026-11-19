@@ -131,10 +131,15 @@ const main = async () => {
   const subByKey = new Map(subcategories.map((s) => [`${s.categoryId}|${s.name}`, s.id]))
   log(`категорий: ${categories.length} • подкатегорий: ${subcategories.length}`)
 
-  // 2) Скрываем старые обычные товары (decor остаётся) и прошлый фильтрованный каталог
+  // 2) Скрываем старые обычные товары (decor остаётся) и прошлый фильтрованный каталог.
+  //    ВАЖНО: не трогаем товары Garments2Look (их публикует sync-garments2look.mjs)
+  //    и товары с собственными загрузками админа (/uploads/) — только legacy-остатки
+  //    прошлых импортов, у которых нет ни каталога, ни g2l, ни загрузок.
   const hidden = await withDbRetry(() => db.product.updateMany({
     where: {
       decor: false,
+      slug: { not: { startsWith: 'g2l-' } },
+      images: { not: { startsWith: '["/uploads/' } },
       OR: [
         { images: { not: { contains: '/products/catalog/' } } },
         { images: '' },

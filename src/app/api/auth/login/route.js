@@ -10,7 +10,7 @@ const POST = async (request) => {
   try {
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== 'object') {
-      return NextResponse.json({ error: 'Некорректное тело запроса' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
     const login = typeof body.login === 'string' ? body.login.trim().toLowerCase() : ''
@@ -18,21 +18,21 @@ const POST = async (request) => {
 
     const user = await db.user.findUnique({ where: { login } })
     if (!user || !USER_AUTH.verifyPassword(password, user.passwordHash)) {
-      return NextResponse.json({ error: 'Неверный логин или пароль' }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid login or password' }, { status: 401 })
     }
 
     // Заблокированные и забаненные аккаунты не проходят
     if (user.banned) {
-      return NextResponse.json({ error: 'Аккаунт забанен администратором' }, { status: 403 })
+      return NextResponse.json({ error: 'Account banned by administrator' }, { status: 403 })
     }
     if (user.blocked) {
-      return NextResponse.json({ error: 'Аккаунт заблокирован — обратитесь в поддержку' }, { status: 403 })
+      return NextResponse.json({ error: 'Account is blocked — contact support' }, { status: 403 })
     }
 
     return NextResponse.json({ token: USER_AUTH.issueToken(user.id), user: DTO.toUserDTO(user) })
   } catch (error) {
     console.error('[api/auth/login] ошибка входа:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось выполнить вход' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not sign in' }, { status: 500 })
   }
 }
 

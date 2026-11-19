@@ -55,6 +55,8 @@ model Product {
   sizes       String   @default("[]")
   colors      String   @default("[]")
   images      String   @default("[]")
+  // SEO alt-тексты изображений: JSON-массив строк, параллельный images
+  imageAlts   String   @default("[]")
   // none | new | hit | sale
   label       String   @default("none")
   stock       Int      @default(10)

@@ -15,15 +15,15 @@ const PUT = async (request) => {
 
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== 'object') {
-      return NextResponse.json({ error: 'Некорректное тело запроса' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
     const user = await db.user.findUnique({ where: { id: userId } })
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
     if (user.blocked || user.banned) {
-      return NextResponse.json({ error: 'Аккаунт заблокирован' }, { status: 403 })
+      return NextResponse.json({ error: 'Account is blocked' }, { status: 403 })
     }
 
     const data = {}
@@ -35,12 +35,12 @@ const PUT = async (request) => {
     if (body.newPassword !== undefined && body.newPassword !== '') {
       if (!USER_AUTH.isValidPassword(body.newPassword)) {
         return NextResponse.json(
-          { error: `Новый пароль должен быть минимум ${USER_AUTH.MIN_PASSWORD_LENGTH} символов` },
+          { error: `New password must be at least ${USER_AUTH.MIN_PASSWORD_LENGTH} characters` },
           { status: 400 }
         )
       }
       if (!USER_AUTH.verifyPassword(String(body.currentPassword || ''), user.passwordHash)) {
-        return NextResponse.json({ error: 'Текущий пароль указан неверно' }, { status: 400 })
+        return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 })
       }
       data.passwordHash = USER_AUTH.hashPassword(body.newPassword)
     }
@@ -50,7 +50,7 @@ const PUT = async (request) => {
     return NextResponse.json({ user: DTO.toUserDTO(updated) })
   } catch (error) {
     console.error('[api/auth/profile] ошибка обновления профиля:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось обновить профиль' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not update the profile' }, { status: 500 })
   }
 }
 

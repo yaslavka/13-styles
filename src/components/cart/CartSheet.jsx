@@ -137,12 +137,10 @@ const CartSheet = () => {
         {paying ? (
           <PayItemDialog
             item={paying}
-            onClose={() => {
-              // Оплаченная позиция уходит из корзины (снимаем до сброса состояния)
-              const paid = paying
-              setPaying(null)
-              if (paid) useCart.getState().remove(paid.key)
-            }}
+            // Закрытие диалога ТОЛЬКО закрывает окно: товар остаётся в корзине.
+            // Позиция покидает корзину в двух случаях: покупатель нажал «Удалить»
+            // (remove выше) или оплата прошла успешно (/payment/result снимает её).
+            onClose={() => setPaying(null)}
           />
         ) : null}
       </SheetContent>

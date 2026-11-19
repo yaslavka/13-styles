@@ -1,0 +1,18 @@
+# robots.txt 13 STYLES — генерируется scripts/generate-sitemap.mjs
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /account
+Disallow: /checkout
+
+User-agent: googlebot
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /account
+Disallow: /checkout
+
+Sitemap: https://13styles.example/sitemap.xml

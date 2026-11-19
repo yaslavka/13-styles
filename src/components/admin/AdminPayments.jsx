@@ -37,13 +37,13 @@ const AdminPayments = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [merchants, setMerchants] = useState([])
-  const [settings, setSettings] = useState({ notifyAllowUnverified: false, eurIdrFallback: 17500, paymentDueMinutes: 60, customerTokenization: true })
+  const [settings, setSettings] = useState({ siteUrl: '', notifyAllowUnverified: false, eurIdrFallback: 17500, paymentDueMinutes: 60, customerTokenization: true })
   const [payments, setPayments] = useState([])
   const [stats, setStats] = useState({})
   const [hosts, setHosts] = useState({ production: '', sandbox: '' })
   const [envInfo, setEnvInfo] = useState({})
 
-  const notifyUrl = useMemo(() => `${siteUrl}/api/payments/doku/notify`, [siteUrl])
+  const notifyUrl = useMemo(() => `${settings.siteUrl || siteUrl || 'https://your-domain.com'}/api/payments/doku/notify`, [settings.siteUrl, siteUrl])
 
   const load = async () => {
     setLoading(true)
@@ -89,6 +89,7 @@ const AdminPayments = () => {
           enabled: m.enabled === true,
         })),
         settings: {
+          siteUrl: String(settings.siteUrl || '').trim(),
           notifyAllowUnverified: settings.notifyAllowUnverified === true,
           eurIdrFallback: Number(settings.eurIdrFallback) || 17500,
           paymentDueMinutes: Number(settings.paymentDueMinutes) || 60,
@@ -135,13 +136,17 @@ const AdminPayments = () => {
         </h3>
         <div className="grid gap-3 text-sm text-purple-100 sm:grid-cols-2">
           <div>
-            <span className="font-bold text-purple-300">URL уведомлений (DOKU Console → Notification URL):</span>
+            <span className="font-bold text-purple-300">Серверный callback (HTTP Notification):</span>
             <div className="mt-1 flex items-center gap-2">
               <code className="flex-1 truncate rounded-xl bg-black/40 px-3 py-1.5 text-xs text-emerald-200">{notifyUrl}</code>
               <button type="button" onClick={copyNotify} aria-label="Скопировать URL уведомления" className="glass-btn glass-btn-ghost rounded-xl px-2.5 py-1.5">
                 <Copy className="h-4 w-4" aria-hidden />
               </button>
             </div>
+            <p className="mt-1 text-[11px] leading-snug text-emerald-200/80">
+              Callback URL передаётся прямо в запросе создания платежа (additional_info.override_notification_url),
+              а возврат покупателя — в order.callback_url. Настраивать Notification URL в DOKU Console не требуется.
+            </p>
           </div>
           <div className="space-y-1">
             <p><span className="font-bold text-purple-300">Хост боевой:</span> <code className="text-xs">{hosts.production}</code></p>
@@ -161,7 +166,19 @@ const AdminPayments = () => {
       {/* Глобальные настройки */}
       <div className="glass-panel space-y-4 p-5">
         <h3 className="font-display text-lg font-bold text-white">Глобальные настройки</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="siteurl" className="text-xs font-bold text-purple-200">Адрес сайта (для callback DOKU)</Label>
+            <Input
+              id="siteurl" type="url" placeholder="https://13styles.ru"
+              value={settings.siteUrl}
+              onChange={(e) => setSettings((prev) => ({ ...prev, siteUrl: e.target.value }))}
+              className="bg-black/30"
+            />
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Публичный HTTPS-домен магазина: он подставляется в callback_url и override_notification_url каждого платежа.
+            </p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="rate" className="text-xs font-bold text-purple-200">Резервный курс EUR→IDR</Label>
             <Input
@@ -171,6 +188,8 @@ const AdminPayments = () => {
               className="bg-black/30"
             />
           </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="due" className="text-xs font-bold text-purple-200">Срок оплаты (минут)</Label>
             <Input

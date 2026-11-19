@@ -102,6 +102,7 @@ const PUT = async (request) => {
     }
 
     // Глобальные настройки
+    if ('siteUrl' in settings) await setSetting('site.url', String(settings.siteUrl || '').trim().replace(/\/+$/, ''))
     if ('notifyAllowUnverified' in settings) await setSetting('doku.notifyAllowUnverified', settings.notifyAllowUnverified === true)
     if ('eurIdrFallback' in settings) await setSetting('doku.eurIdrFallback', Number(settings.eurIdrFallback) || 17500)
     if ('paymentDueMinutes' in settings) await setSetting('doku.paymentDueMinutes', Number(settings.paymentDueMinutes) || 60)

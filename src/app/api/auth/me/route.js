@@ -15,18 +15,18 @@ const GET = async (request) => {
 
     const user = await db.user.findUnique({ where: { id: userId } })
     if (!user) {
-      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Заблокирован или забанен — токен больше не действителен
     if (user.blocked || user.banned) {
-      return NextResponse.json({ error: 'Аккаунт заблокирован' }, { status: 403 })
+      return NextResponse.json({ error: 'Account is blocked' }, { status: 403 })
     }
 
     return NextResponse.json({ user: DTO.toUserDTO(user) })
   } catch (error) {
     console.error('[api/auth/me] ошибка запроса профиля:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось загрузить профиль' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not load the profile' }, { status: 500 })
   }
 }
 

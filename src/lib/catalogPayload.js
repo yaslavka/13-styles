@@ -13,6 +13,14 @@ const cleanStringArray = (value, maxItems) => {
   return Number.isInteger(maxItems) && maxItems > 0 ? cleaned.slice(0, maxItems) : cleaned
 }
 
+// Alt-тексты: массив строк той же длины, что и images (пустые строки допустимы —
+// DTO сгенерирует авто-альт). Лишние хвосты отбрасываются.
+const cleanAltArray = (value, maxItems) => {
+  if (!Array.isArray(value)) return []
+  const cleaned = value.map((entry) => (typeof entry === 'string' ? entry.trim().slice(0, 200) : ''))
+  return Number.isInteger(maxItems) && maxItems > 0 ? cleaned.slice(0, maxItems) : cleaned
+}
+
 const normalizeStock = (value, fallback = 10) => {
   const num = Number(value)
   if (!Number.isFinite(num)) return fallback
@@ -78,6 +86,7 @@ const CATALOG_PAYLOAD = {
   LABEL_VALUES,
   MAX_NAME_LENGTH,
   cleanStringArray,
+  cleanAltArray,
   normalizeStock,
   normalizeRating,
   normalizeReviews,

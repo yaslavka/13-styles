@@ -14,21 +14,21 @@ const POST = async (request) => {
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: 'Некорректное тело запроса' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
   const orderCode = String(body?.orderCode || '').trim()
   if (!orderCode) {
-    return NextResponse.json({ error: 'Не указан номер заказа' }, { status: 400 })
+    return NextResponse.json({ error: 'Order number is missing' }, { status: 400 })
   }
 
   try {
     const order = await db.order.findUnique({ where: { code: orderCode } })
     if (!order) {
-      return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
     if (['canceled'].includes(order.status)) {
-      return NextResponse.json({ error: 'Заказ отменён — оплата невозможна' }, { status: 400 })
+      return NextResponse.json({ error: 'Order is canceled — payment is not available' }, { status: 400 })
     }
 
     let merchant = null
@@ -36,15 +36,25 @@ const POST = async (request) => {
     if (requestedCode) {
       merchant = await db.paymentMerchant.findUnique({ where: { code: requestedCode } })
       if (!merchant || !merchant.enabled) {
-        return NextResponse.json({ error: `Мерчант ${requestedCode} недоступен` }, { status: 400 })
+        return NextResponse.json({ error: `Merchant ${requestedCode} is not available` }, { status: 400 })
       }
     }
     if (!merchant) merchant = await getDefaultMerchant()
     if (!merchant) {
-      return NextResponse.json({ error: 'Платёжная система не настроена' }, { status: 500 })
+      return NextResponse.json({ error: 'Payment system is not configured' }, { status: 500 })
     }
 
     const settings = await getSettings()
+    // Базовый URL для всех callback-ссылок: настройка «site.url» в админке,
+    // затем NEXT_PUBLIC_SITE_URL, затем origin текущего запроса
+    const baseUrl =
+      settings.siteUrl ||
+      SITE_URL ||
+      (request.headers.get('origin') || '').replace(/\/+$/, '') ||
+      `${request.nextUrl.protocol}//${request.nextUrl.host}`
+    const notifyUrl = `${baseUrl}/api/payments/doku/notify`
+    const resultUrl = `${baseUrl}/payment/result?order=${order.code}`
+
     const { rate, source: rateSource } = await getEurIdrRate(settings.eurIdrFallback)
     const amountIdr = eurToIdr(order.total, rate)
 
@@ -71,13 +81,21 @@ const POST = async (request) => {
       last.price = Math.max(1, last.price + (amountIdr - linesSum))
     }
 
+    // ВАЖНО: все callback-URL передаются ПРЯМО В ЗАПРОСЕ — настроить что-либо
+    // в DOKU Console не требуется:
+    //  - order.callback_url / callback_url_result / callback_url_cancel — куда
+    //    вернуть покупателя после оплаты;
+    //  - additional_info.override_notification_url — серверный HTTP Notification
+    //    (статус успеха/ошибки) на наш /api/payments/doku/notify.
+    // Доки: developers.doku.com/get-started-with-doku-api/notification/override-notification-url
     const requestBody = {
       order: {
         amount: amountIdr,
         invoice_number: invoiceNumber,
         currency: 'IDR',
-        callback_url: `${SITE_URL}/payment/result?order=${order.code}`,
-        callback_url_result: `${SITE_URL}/payment/result?order=${order.code}`,
+        callback_url: resultUrl,
+        callback_url_result: resultUrl,
+        callback_url_cancel: `${baseUrl}/payment/result?order=${order.code}&canceled=1`,
         language: 'EN',
         line_items: lineItems,
       },
@@ -89,6 +107,9 @@ const POST = async (request) => {
         ...(settings.customerTokenization ? { id: customerRef } : {}),
         name: order.customer || '13 STYLES customer',
         phone: String(order.phone || '').replace(/[^0-9+]/g, '').slice(0, 18) || undefined,
+      },
+      additional_info: {
+        override_notification_url: notifyUrl,
       },
     }
 
@@ -113,7 +134,7 @@ const POST = async (request) => {
         },
       })
       console.error('[doku/create] ошибка DOKU:', result.status, JSON.stringify(result.json).slice(0, 500))
-      return NextResponse.json({ error: 'DOKU отклонил создание платежа', detail: result.json }, { status: 502 })
+      return NextResponse.json({ error: 'DOKU declined the payment creation', detail: result.json }, { status: 502 })
     }
 
     const payment = await db.payment.create({
@@ -148,7 +169,7 @@ const POST = async (request) => {
     })
   } catch (error) {
     console.error('[doku/create] ошибка:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось создать платёж' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not create the payment' }, { status: 500 })
   }
 }
 

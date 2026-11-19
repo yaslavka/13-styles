@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://13styles.example/sitemap/pages.xml</loc>
+    <lastmod>2026-11-19T01:41:21.747Z</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://13styles.example/sitemap/categories.xml</loc>
+    <lastmod>2026-11-19T01:41:21.759Z</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://13styles.example/sitemap/products-1.xml</loc>
+    <lastmod>2026-11-19T01:41:22.526Z</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://13styles.example/sitemap/products-2.xml</loc>
+    <lastmod>2026-11-19T01:41:23.324Z</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://13styles.example/sitemap/products-3.xml</loc>
+    <lastmod>2026-11-19T01:41:23.931Z</lastmod>
+  </sitemap>
+</sitemapindex>

@@ -10,27 +10,27 @@ const POST = async (request) => {
   try {
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== 'object') {
-      return NextResponse.json({ error: 'Некорректное тело запроса' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
     const login = typeof body.login === 'string' ? body.login.trim().toLowerCase() : ''
     if (!USER_AUTH.isValidLogin(login)) {
       return NextResponse.json(
-        { error: `Логин: от ${USER_AUTH.MIN_LOGIN_LENGTH} до ${USER_AUTH.MAX_LOGIN_LENGTH} символов — любые буквы и цифры, сложность не требуется` },
+        { error: `Login: ${USER_AUTH.MIN_LOGIN_LENGTH}–${USER_AUTH.MAX_LOGIN_LENGTH} characters — any letters and digits, no complexity required` },
         { status: 400 }
       )
     }
 
     if (!USER_AUTH.isValidPassword(body.password)) {
       return NextResponse.json(
-        { error: `Пароль должен быть минимум ${USER_AUTH.MIN_PASSWORD_LENGTH} символов` },
+        { error: `Password must be at least ${USER_AUTH.MIN_PASSWORD_LENGTH} characters` },
         { status: 400 }
       )
     }
 
     const existing = await db.user.findUnique({ where: { login } })
     if (existing) {
-      return NextResponse.json({ error: 'Такой логин уже занят — попробуйте другой' }, { status: 400 })
+      return NextResponse.json({ error: 'This login is already taken — try another one' }, { status: 400 })
     }
 
     const created = await db.user.create({
@@ -44,7 +44,7 @@ const POST = async (request) => {
     return NextResponse.json({ token: USER_AUTH.issueToken(created.id), user: DTO.toUserDTO(created) }, { status: 201 })
   } catch (error) {
     console.error('[api/auth/register] ошибка регистрации:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось создать аккаунт' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not create the account' }, { status: 500 })
   }
 }
 

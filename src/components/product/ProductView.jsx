@@ -15,6 +15,7 @@ import { styleGradient, formatPrice, AGE_LABEL } from '@/lib/constants'
 import ProductBadges from '@/components/product/ProductBadges'
 import LightboxGallery from '@/components/product/LightboxGallery'
 import SmartImage from '@/components/product/SmartImage'
+import { productImageAlt } from '@/lib/dto'
 import PriceTag from '@/components/motion/PriceTag'
 import GlassButton from '@/components/motion/GlassButton'
 import ProductGrid from '@/components/product/ProductGrid'
@@ -199,7 +200,7 @@ const ProductView = ({ product, related = [] }) => {
                 <SwiperSlide key={src} className="h-full w-full">
                   <SmartImage
                     src={src}
-                    alt={`${product.name} — ${slideIndex + 1}`}
+                    alt={productImageAlt(product, slideIndex)}
                     spinner="lg"
                     className={`h-full w-full object-cover transition-transform duration-[600ms] ease-out ${
                       hovering && hasMultiple ? 'scale-[1.05]' : 'scale-100'
@@ -452,7 +453,7 @@ const ProductView = ({ product, related = [] }) => {
         index={lightboxIndex}
         onIndexChange={setLightboxIndex}
         onClose={() => setLightboxOpen(false)}
-        alt={product.name}
+        alt={productImageAlt(product, index)}
       />
     </div>
   )

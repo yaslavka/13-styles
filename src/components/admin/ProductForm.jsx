@@ -36,6 +36,8 @@ const EMPTY_FORM = {
   sizes: [],
   colors: [],
   images: [],
+  // SEO alt-тексты фото: массив параллелен images (пустая строка = авто-альт)
+  imageAlts: [],
   stock: 10,
   rating: 4.8,
   reviews: 0,
@@ -63,6 +65,11 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         oldPrice: product.oldPrice ?? '',
         customPayment: product.customPayment === true,
         paymentUrl: product.paymentUrl || '',
+        images: Array.isArray(product.images) ? product.images : [],
+        // Догоняем длину массива alt до длины массива фото
+        imageAlts: Array.isArray(product.images)
+          ? product.images.map((_, index) => (Array.isArray(product.imageAlts) ? product.imageAlts[index] || '' : ''))
+          : [],
       })
     } else {
       setForm({ ...EMPTY_FORM, categoryId: categories[0] ? String(categories[0].id) : '' })
@@ -94,8 +101,26 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
 
   const addImage = (url) => {
     if (!url) return
-    setForm((prev) => (prev.images.includes(url) ? prev : { ...prev, images: [...prev.images, url] }))
+    setForm((prev) => {
+      if (prev.images.includes(url)) return prev
+      return { ...prev, images: [...prev.images, url], imageAlts: [...prev.imageAlts, ''] }
+    })
     setImageUrl('')
+  }
+
+  const removeImage = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+      imageAlts: prev.imageAlts.filter((_, i) => i !== index),
+    }))
+  }
+
+  const setImageAlt = (index, alt) => {
+    setForm((prev) => ({
+      ...prev,
+      imageAlts: prev.imageAlts.map((item, i) => (i === index ? alt : item)),
+    }))
   }
 
   const uploadFile = async (event) => {
@@ -112,7 +137,7 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
       })
       const data = await API.admin.post('/api/admin/upload', { dataUrl })
       addImage(data.url)
-      toast.success('Фото загружено')
+      toast.success('Фото загружено — задайте SEO alt для него ниже', { duration: 6000 })
     } catch (error) {
       toast.error('Не удалось загрузить фото', { description: error.message })
     } finally {
@@ -138,6 +163,8 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         sizes: form.sizes,
         colors: form.colors,
         images: form.images,
+        // SEO alt-тексты фото: обрезаем до длины images, чтобы массивы были параллельны
+        imageAlts: form.images.map((_, index) => form.imageAlts[index] || ''),
         stock: Number(form.stock),
         rating: Number(form.rating),
         reviews: Number(form.reviews),
@@ -296,37 +323,60 @@ const ProductForm = ({ product, categories, onSaved, onCancel }) => {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-xs text-purple-200">Фото товара (слайдер)</Label>
-        <div className="flex flex-wrap gap-2">
-          {form.images.map((url) => (
-            <span key={url} className="group relative h-16 w-16 overflow-hidden rounded-sm border border-purple-500/40">
-              <SmartImage src={url} alt="" spinner="sm" className="h-full w-full object-cover image-pixelated" />
+      <div className="space-y-3">
+        <div>
+          <Label className="text-xs text-purple-200">Фото товара (слайдер)</Label>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+            Для каждого фото задайте SEO alt — текст индексируется Google Images и влияет на позиции товара.
+          </p>
+        </div>
+        {form.images.map((url, index) => (
+          <div key={`${url}-${index}`} className="flex flex-col gap-2 rounded-2xl border border-purple-500/25 bg-purple-500/5 p-3 sm:flex-row sm:items-center">
+            <span className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-purple-500/40">
+              <SmartImage src={url} alt={form.imageAlts[index] || ''} spinner="sm" className="h-full w-full object-cover" />
               <button
                 type="button"
-                onClick={() => setField('images')(form.images.filter((item) => item !== url))}
+                onClick={() => removeImage(index)}
                 className="absolute inset-0 grid place-items-center bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                aria-label="Удалить фото"
+                aria-label={`Удалить фото ${index + 1}`}
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
             </span>
-          ))}
-          <label className="rounded-xl grid h-16 w-16 cursor-pointer place-items-center border border-dashed border-purple-500/50 text-purple-300 hover:bg-purple-500/10">
+            <div className="min-w-0 flex-1 space-y-1">
+              <Label htmlFor={`img-alt-${index}`} className="text-xs font-bold text-purple-200">
+                SEO alt — фото {index + 1}
+              </Label>
+              <Input
+                id={`img-alt-${index}`}
+                value={form.imageAlts[index] || ''}
+                onChange={(event) => setImageAlt(index, event.target.value)}
+                maxLength={200}
+                placeholder="Nike Air Max 90 sneakers — white, side view"
+                className="h-9 border-purple-500/30 bg-[#0d0c1c] text-xs"
+              />
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                Пусто — сгенерируется автоматически из бренда и названия: «{form.name ? `${form.name} — 13 STYLES photo ${index + 1}` : `13 STYLES photo ${index + 1}`}».
+              </p>
+            </div>
+          </div>
+        ))}
+        <div className="flex flex-wrap gap-2">
+          <label className="grid h-16 w-16 cursor-pointer place-items-center rounded-xl border border-dashed border-purple-500/50 text-purple-300 hover:bg-purple-500/10">
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
             <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={uploadFile} aria-label="Загрузить фото" />
           </label>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            value={imageUrl}
-            onChange={(event) => setImageUrl(event.target.value)}
-            placeholder="/products/hoodie-violet-1.svg или https://…"
-            className="h-9 border-purple-500/30 bg-[#0d0c1c] text-xs"
-          />
-          <GlassButton type="button" tone="dark" className="h-9 px-4 text-xs" onClick={() => addImage(imageUrl.trim())}>
-            Добавить
-          </GlassButton>
+          <div className="flex min-w-0 flex-1 gap-2">
+            <Input
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+              placeholder="/products/hoodie-violet-1.webp или https://…"
+              className="h-9 min-w-0 flex-1 border-purple-500/30 bg-[#0d0c1c] text-xs"
+            />
+            <GlassButton type="button" tone="dark" className="h-9 px-4 text-xs" onClick={() => addImage(imageUrl.trim())}>
+              Добавить
+            </GlassButton>
+          </div>
         </div>
       </div>
 

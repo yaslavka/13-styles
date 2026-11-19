@@ -25,7 +25,7 @@ const GET = async () => {
     return NextResponse.json({ categories })
   } catch (error) {
     console.error('[api/categories] ошибка загрузки категорий:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось загрузить категории' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not load categories' }, { status: 500 })
   }
 }
 

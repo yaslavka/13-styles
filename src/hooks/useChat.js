@@ -43,7 +43,7 @@ const useChat = ({ role, roomId = '', userName = '' } = {}) => {
     const onConnect = () => {
       setConnected(true)
       if (role === 'user') {
-        socket.emit('hello', { role, roomId, userName: userName || 'Гость' })
+        socket.emit('hello', { role, roomId, userName: userName || 'Guest' })
       } else {
         socket.emit('hello', { role })
       }

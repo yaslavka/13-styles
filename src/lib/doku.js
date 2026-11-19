@@ -175,6 +175,9 @@ export const getSettings = async () => {
   const rows = await db.setting.findMany()
   const map = Object.fromEntries(rows.map((row) => [row.key, row.value]))
   return {
+    // Публичный адрес сайта для callback/redirect URL (настройка в админке
+    // важнее NEXT_PUBLIC_SITE_URL: её можно поменять без пересборки)
+    siteUrl: String(map['site.url'] || process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, ''),
     notifyAllowUnverified:
       map['doku.notifyAllowUnverified'] !== undefined
         ? map['doku.notifyAllowUnverified'] === 'true'

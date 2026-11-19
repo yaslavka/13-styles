@@ -24,9 +24,14 @@ export async function generateMetadata({ params }) {
   if (!data?.product) return { title: 'Product not found' }
 
   const product = data.product
-  const title = product.name
-  const description = (product.shortDesc || product.description || '').slice(0, 300)
+  const title = product.brand ? `${product.brand} ${product.name}` : product.name
+  // SEO-описание обязательно у КАЖДОГО товара: если админ оставил поля пустыми,
+  // собираем понятное описание из названия, бренда, категории и цены.
+  const description =
+    (product.shortDesc || product.description || '').trim() ||
+    `${title} — ${product.category?.name || 'catalog item'} at 13 STYLES. Buy online for €${Number(product.price || 0).toFixed(2)} with delivery across Europe in 1–3 days and 14-day returns.`
   const image = product.images?.[0] ? `${SITE_URL}${product.images[0]}` : undefined
+  const alt = product.imageAlts?.[0] || title
 
   return {
     title,
@@ -37,7 +42,7 @@ export async function generateMetadata({ params }) {
       title,
       description,
       url: `${SITE_URL}/product/${product.slug}`,
-      images: image ? [{ url: image, width: 640, height: 640, alt: product.name }] : undefined,
+      images: image ? [{ url: image, width: 640, height: 640, alt }] : undefined,
     },
     twitter: { card: 'summary_large_image', title, description, images: image ? [image] : undefined },
   }
@@ -55,7 +60,7 @@ const ProductPage = async ({ params }) => {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    description: product.shortDesc || product.description,
+    description: product.shortDesc || product.description || `${product.name} — buy online at 13 STYLES`,
     sku: product.slug,
     image: (product.images || []).map((src) => `${SITE_URL}${src}`),
     brand: { '@type': 'Brand', name: product.brand || '13 STYLES' },

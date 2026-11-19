@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/orchestrate.mjs",
-    "build": "next build && node scripts/afterbuild.mjs",
+    "build": "next build && node scripts/generate-sitemap.mjs && node scripts/afterbuild.mjs",
     "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "db:push": "prisma db push --accept-data-loss",
@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "db:dump": "node scripts/make-dump.mjs",
+    "sitemap": "node scripts/generate-sitemap.mjs",
     "db:restore": "node scripts/restore-dump.mjs",
     "images:sync": "node scripts/fetch-catalog-images.mjs",
     "chat:dev": "npm run dev --prefix mini-services/chat-service",

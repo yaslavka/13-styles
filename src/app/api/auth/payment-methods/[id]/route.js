@@ -21,12 +21,12 @@ const PUT = async (request, context) => {
     const params = await context.params
     const id = parseId(params?.id)
     if (id === null) {
-      return NextResponse.json({ error: 'Некорректный идентификатор' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid identifier' }, { status: 400 })
     }
 
     const existing = await db.paymentMethod.findFirst({ where: { id, userId } })
     if (!existing) {
-      return NextResponse.json({ error: 'Способ оплаты не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Payment method not found' }, { status: 404 })
     }
 
     const updated = await db.$transaction(async (tx) => {
@@ -37,7 +37,7 @@ const PUT = async (request, context) => {
     return NextResponse.json({ method: DTO.toPaymentMethodDTO(updated) })
   } catch (error) {
     console.error('[api/auth/payment-methods/[id]] ошибка обновления:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось обновить способ оплаты' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not update the payment method' }, { status: 500 })
   }
 }
 
@@ -52,12 +52,12 @@ const DELETE = async (request, context) => {
     const params = await context.params
     const id = parseId(params?.id)
     if (id === null) {
-      return NextResponse.json({ error: 'Некорректный идентификатор' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid identifier' }, { status: 400 })
     }
 
     const existing = await db.paymentMethod.findFirst({ where: { id, userId } })
     if (!existing) {
-      return NextResponse.json({ error: 'Способ оплаты не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Payment method not found' }, { status: 404 })
     }
 
     await db.paymentMethod.delete({ where: { id } })
@@ -76,7 +76,7 @@ const DELETE = async (request, context) => {
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('[api/auth/payment-methods/[id]] ошибка отвязки:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось отвязать способ оплаты' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not unlink the payment method' }, { status: 500 })
   }
 }
 

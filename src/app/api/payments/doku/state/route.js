@@ -10,7 +10,7 @@ const GET = async (request) => {
   const { searchParams } = new URL(request.url)
   const orderCode = String(searchParams.get('order') || '').trim()
   if (!orderCode) {
-    return NextResponse.json({ error: 'Не указан номер заказа' }, { status: 400 })
+    return NextResponse.json({ error: 'Order number is missing' }, { status: 400 })
   }
 
   try {
@@ -19,10 +19,17 @@ const GET = async (request) => {
       orderBy: { createdAt: 'desc' },
     })
     if (!payment) {
-      return NextResponse.json({ error: 'Платёж не найден' }, { status: 404 })
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 
     const order = await db.order.findUnique({ where: { code: orderCode } })
+
+    // Снапшот позиций заказа: страница результата оплаты снимает их из корзины,
+    // когда оплата успешно подтверждена
+    let items = []
+    try { items = JSON.parse(order?.items || '[]') } catch {}
+    // order.items — строка JSON со списком позиций (снимок корзины)
+    items = Array.isArray(items) ? items : []
 
     return NextResponse.json({
       status: payment.status,
@@ -35,10 +42,11 @@ const GET = async (request) => {
       invoiceNumber: payment.invoiceNumber,
       updatedAt: payment.updatedAt,
       orderStatus: order?.status || null,
+      items: items.map((item) => ({ slug: String(item.slug || ''), size: String(item.size || '') })),
     })
   } catch (error) {
     console.error('[doku/state] ошибка:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось получить статус' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not get the payment status' }, { status: 500 })
   }
 }
 

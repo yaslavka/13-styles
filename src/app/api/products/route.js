@@ -186,7 +186,7 @@ const GET = async (request) => {
     return NextResponse.json({ items, total, hasMore })
   } catch (error) {
     console.error('[api/products] ошибка загрузки списка товаров:', error?.message || error)
-    return NextResponse.json({ error: 'Не удалось загрузить список товаров' }, { status: 500 })
+    return NextResponse.json({ error: 'Could not load the product list' }, { status: 500 })
   }
 }
 

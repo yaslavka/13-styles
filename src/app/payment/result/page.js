@@ -4,7 +4,7 @@ import PaymentResultView from '@/components/payment/PaymentResultView'
 // (?order=CODE), статус подтягивается с сервера опросом.
 
 export const metadata = {
-  title: 'Статус оплаты',
+  title: 'Payment status',
   robots: { index: false, follow: false },
 }
 

@@ -4,11 +4,12 @@ import { verifyNotifySignature, merchantCredentials, getSettings } from '@/lib/d
 
 export const dynamic = 'force-dynamic'
 
-// POST /api/payments/doku/notify — HTTP Notification от DOKU.
+// POST /api/payments/doku/notify — HTTP Notification от DOKU (серверный callback).
 // Документ: developers.doku.com/get-started-with-doku-api/notification
+// URL уведомления передаётся в каждом запросе создания платежа через
+// additional_info.override_notification_url — конфигурация в DOKU Console не нужна.
 // Проверяем подпись (Request-Target = путь этого URL), обновляем статус платежа,
 // при успехе — подтверждаем заказ и сохраняем токен карты (токенизация).
-// ВАЖНО: URL уведомления настраивается в DOKU Console → Configuration → Notification URL.
 
 const findTokenDeep = (node, keys, depth = 0, found = []) => {
   if (depth > 6 || found.length > 4) return found

@@ -147,6 +147,7 @@ const PUT = async (request, context) => {
     if (body.sizes !== undefined) data.sizes = JSON.stringify(PAYLOAD.cleanStringArray(body.sizes, 12))
     if (body.colors !== undefined) data.colors = JSON.stringify(PAYLOAD.cleanStringArray(body.colors))
     if (body.images !== undefined) data.images = JSON.stringify(PAYLOAD.cleanStringArray(body.images, 8))
+    if (body.imageAlts !== undefined) data.imageAlts = JSON.stringify(PAYLOAD.cleanAltArray(body.imageAlts, 8))
 
     if (body.stock !== undefined) data.stock = PAYLOAD.normalizeStock(body.stock)
     if (body.rating !== undefined) data.rating = PAYLOAD.normalizeRating(body.rating)
