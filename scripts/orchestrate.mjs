@@ -1,11 +1,13 @@
 // ПОЛНЫЙ ОРКЕСТР 13 STYLES — одна команда `npm run dev` (работает и на Windows, и на Linux/macOS):
-//   1. Готовит .env (DATABASE_URL, админ, секреты) — если его нет; на Windows путь к БД
+//   1. Готовит .env (DATABASE_URL, админ, секреты, ПОРТЫ) — если его нет; на Windows путь к БД
 //      нормализуется в прямые слэши (Prisma не понимает обратные слэши в file:-URL)
 //   2. prisma generate — если клиент не сгенерирован
 //   3. Восстанавливает БД из дампа db/seed/custom.db — если база пустая/отсутствует
 //   4. Досинхронизирует картинки каталога в фоне — если файлов не хватает
-//   5. Ставит зависимости чат-микросервиса (если нужно) и запускает его на :3003
-//   6. Запускает Next.js dev-сервер на :3000
+//   5. Ставит зависимости чат-микросервиса (если нужно) и запускает его на :CHAT_PORT (из .env)
+//   6. Запускает Next.js dev-сервер на :PORT (из .env)
+// Порты: PORT (витрина, по умолчанию 3000) и CHAT_PORT (чат, по умолчанию 3003) задаются
+// в .env — проект можно поднять на любых свободных портах, стандартные заняты не проблема.
 // Админ-панель создаётся автоматически: логин/пароль из .env (по умолчанию admin / 13styles2024).
 // Запуск: node scripts/orchestrate.mjs (или npm run dev)
 
@@ -79,15 +81,18 @@ const ensureEnv = () => {
   if (!env.ADMIN_LOGIN) write('ADMIN_LOGIN', 'admin')
   if (!env.ADMIN_PASSWORD) write('ADMIN_PASSWORD', '13styles2024')
   if (!env.USER_AUTH_SECRET) write('USER_AUTH_SECRET', crypto.randomBytes(24).toString('hex'))
+  // Порты запуска — в .env, чтобы поднять проект на свободных портах
+  if (!env.PORT) write('PORT', '3000')
+  if (!env.CHAT_PORT) write('CHAT_PORT', '3003')
 
   if (needed.length > 0) {
+    // Записываем ВСЕ ключи из env: существующие (DOKU и прочие) не теряются при дозаписи
+    const priorityKeys = ['DATABASE_URL', 'NEXT_PUBLIC_SITE_URL', 'ADMIN_LOGIN', 'ADMIN_PASSWORD', 'USER_AUTH_SECRET', 'PORT', 'CHAT_PORT']
+    const restKeys = Object.keys(env).filter((key) => !priorityKeys.includes(key))
     const content = [
       '# Автосгенерировано scripts/orchestrate.mjs — можно править вручную',
-      `DATABASE_URL=${env.DATABASE_URL}`,
-      `NEXT_PUBLIC_SITE_URL=${env.NEXT_PUBLIC_SITE_URL}`,
-      `ADMIN_LOGIN=${env.ADMIN_LOGIN}`,
-      `ADMIN_PASSWORD=${env.ADMIN_PASSWORD}`,
-      `USER_AUTH_SECRET=${env.USER_AUTH_SECRET}`,
+      ...priorityKeys.map((key) => `${key}=${env[key]}`),
+      ...restKeys.map((key) => `${key}=${env[key]}`),
       '',
     ].join('\n')
     fs.writeFileSync(ENV_PATH, content)
@@ -182,31 +187,33 @@ const main = async () => {
   // 4.1) Garments2Look: метаданные + публикация по фото на диске (фон)
   syncGarments2Look()
 
-  // 5) Чат-сервис на :3003
-  if (await portBusy(3003)) {
-    log('чат-сервис уже слушает :3003 — не запускаем второй')
+  // 5) Чат-сервис на :CHAT_PORT (из .env, по умолчанию 3003)
+  const chatPort = Number(env.CHAT_PORT || env.NEXT_PUBLIC_CHAT_PORT) || 3003
+  if (await portBusy(chatPort)) {
+    log(`чат-сервис уже слушает :${chatPort} — не запускаем второй`)
   } else {
     const chat = ensureChatService()
     if (chat) {
-      const child = spawn(chat.cmd, chat.args, { cwd: chat.cwd, env: process.env, stdio: 'inherit' })
+      const child = spawn(chat.cmd, chat.args, { cwd: chat.cwd, env: { ...process.env, ...env }, stdio: 'inherit' })
       children.push({ name: 'chat-service', proc: child })
-      log('чат-сервис запущен на :3003')
+      log(`чат-сервис запущен на :${chatPort}`)
     }
   }
 
-  // 6) Next.js dev-сервер на :3000
-  if (await portBusy(3000)) {
-    log('порт 3000 занят — dev-сервер уже запущен, оркестр завершается без дублей')
+  // 6) Next.js dev-сервер на :PORT (из .env, по умолчанию 3000)
+  const webPort = Number(env.PORT) || 3000
+  if (await portBusy(webPort)) {
+    log(`порт ${webPort} занят — dev-сервер уже запущен, оркестр завершается без дублей`)
     return
   }
   const nextBin = path.join(ROOT, 'node_modules', 'next', 'dist', 'bin', 'next')
-  const next = spawn(runtimeBin(), [nextBin, 'dev', '-p', '3000'], {
+  const next = spawn(runtimeBin(), [nextBin, 'dev', '-p', String(webPort)], {
     cwd: ROOT,
     env: { ...process.env, ...env, DATABASE_URL: toDbUrl(DB_PATH) },
     stdio: 'inherit',
   })
   children.push({ name: 'next-dev', proc: next })
-  log(`Next.js dev-сервер запущен на http://localhost:3000`)
+  log(`Next.js dev-сервер запущен на http://localhost:${webPort}`)
   log('админ-панель: /admin — логин и пароль указаны в .env')
 
   const shutdown = (signal) => {

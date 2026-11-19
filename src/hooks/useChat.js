@@ -5,12 +5,26 @@ import { io } from 'socket.io-client'
 
 // Хук чата поддержки на socket.io.
 // Соединение — синглтон на роль ('user' | 'support'), чтобы не плодить сокеты.
+// Порт чат-сервиса берётся в рантайме у /api/config/chat-port (CHAT_PORT из .env
+// на сервере) — смена порта не требует пересборки клиента, только перезапуск.
+
+// Резолв порта — один раз на вкладку (промис кэшируется)
+let chatPortPromise = null
+const resolveChatPort = () => {
+  if (!chatPortPromise) {
+    chatPortPromise = fetch('/api/config/chat-port', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => Number(data?.port) || Number(process.env.NEXT_PUBLIC_CHAT_PORT) || 3003)
+      .catch(() => Number(process.env.NEXT_PUBLIC_CHAT_PORT) || 3003)
+  }
+  return chatPortPromise
+}
 
 const sockets = new Map()
 
-const getSocket = (role) => {
+const getSocket = (role, port) => {
   if (!sockets.has(role)) {
-    const socket = io('/?XTransformPort=3003', {
+    const socket = io(`/?XTransformPort=${port}`, {
       // path обязан совпадать с сервером чата (socket.ioServer({ path: '/' }))
       path: '/',
       transports: ['websocket', 'polling'],
@@ -37,15 +51,14 @@ const useChat = ({ role, roomId = '', userName = '' } = {}) => {
   const typingTimerRef = useRef(null)
 
   useEffect(() => {
-    const socket = getSocket(role)
-    socketRef.current = socket
+    let active = true
 
     const onConnect = () => {
       setConnected(true)
       if (role === 'user') {
-        socket.emit('hello', { role, roomId, userName: userName || 'Guest' })
+        socketRef.current?.emit('hello', { role, roomId, userName: userName || 'Guest' })
       } else {
-        socket.emit('hello', { role })
+        socketRef.current?.emit('hello', { role })
       }
     }
 
@@ -73,24 +86,35 @@ const useChat = ({ role, roomId = '', userName = '' } = {}) => {
       typingTimerRef.current = setTimeout(() => setTypingWho(''), TYPING_TTL)
     }
 
-    socket.on('connect', onConnect)
-    socket.on('disconnect', onDisconnect)
-    socket.on('chat:history', onHistory)
-    socket.on('chat:message', onMessage)
-    socket.on('rooms:update', onRooms)
-    socket.on('chat:online', onOnline)
-    socket.on('chat:typing', onTyping)
+    // Порт приходит из /api/config/chat-port — подключаемся после резолва
+    resolveChatPort().then((port) => {
+      if (!active) return
+      const socket = getSocket(role, port)
+      socketRef.current = socket
 
-    if (socket.connected) onConnect()
+      socket.on('connect', onConnect)
+      socket.on('disconnect', onDisconnect)
+      socket.on('chat:history', onHistory)
+      socket.on('chat:message', onMessage)
+      socket.on('rooms:update', onRooms)
+      socket.on('chat:online', onOnline)
+      socket.on('chat:typing', onTyping)
+
+      if (socket.connected) onConnect()
+    })
 
     return () => {
-      socket.off('connect', onConnect)
-      socket.off('disconnect', onDisconnect)
-      socket.off('chat:history', onHistory)
-      socket.off('chat:message', onMessage)
-      socket.off('rooms:update', onRooms)
-      socket.off('chat:online', onOnline)
-      socket.off('chat:typing', onTyping)
+      active = false
+      const socket = socketRef.current
+      if (socket) {
+        socket.off('connect', onConnect)
+        socket.off('disconnect', onDisconnect)
+        socket.off('chat:history', onHistory)
+        socket.off('chat:message', onMessage)
+        socket.off('rooms:update', onRooms)
+        socket.off('chat:online', onOnline)
+        socket.off('chat:typing', onTyping)
+      }
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current)
     }
   }, [role, roomId, userName])

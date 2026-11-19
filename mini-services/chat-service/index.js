@@ -4,9 +4,30 @@
 
 import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Server } from 'socket.io'
 
-const PORT = 3003
+// Порт чат-сервиса задаётся в .env корня проекта (CHAT_PORT) — по умолчанию 3003.
+// Файл .env читается здесь напрямую, чтобы сервис работал одинаково и под оркестром
+// (npm run dev), и под pm2/независимым запуском без отдельной передачи переменных.
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const loadRootEnv = () => {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, '..', '..', '.env'), 'utf-8')
+    for (const line of raw.split('\n')) {
+      const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/)
+      // переменные окружения процесса имеют приоритет над .env
+      if (match && process.env[match[1]] === undefined) {
+        process.env[match[1]] = match[2].replace(/^["']|["']$/g, '').trim()
+      }
+    }
+  } catch {}
+}
+loadRootEnv()
+
+const PORT = Number(process.env.CHAT_PORT) || 3003
 const MAX_MESSAGES = 200
 const MAX_ROOMS = 200
 

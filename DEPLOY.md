@@ -84,6 +84,12 @@ DATABASE_URL=file:/var/www/13styles/db/custom.db
 # HTTPS протокол обязателен — DOKU принимает только https callback-URL:
 NEXT_PUBLIC_SITE_URL=https://13-style.com
 
+# ПОРТЫ ЗАПУСКА — если стандартные на сервере заняты, впишите свои:
+# PORT      — витрина Next.js (npm start / pm2 web)
+# CHAT_PORT — socket.io чат-сервиса (pm2 chat); nginx proxy_pass должен указывать на те же порты
+PORT=3000
+CHAT_PORT=3003
+
 # Платежи DOKU (5 мерчантов, FUNSTAY — по умолчанию):
 DOKU_ENV=production
 DOKU_NOTIFY_ALLOW_UNVERIFIED=true
@@ -125,20 +131,25 @@ npm run build
 
 ## Шаг 5. Запуск процессов через pm2
 
-```bash
-# Основной сайт (порт 3000)
-pm2 start "node .next/standalone/server.js" --name web -e .env
+Порты берутся из .env (PORT и CHAT_PORT) — если стандартные 3000/3003 заняты,
+просто впишите свои в .env и перезапустите pm2-процессы.
 
-# Чат поддержки (socket.io, порт 3003)
+```bash
+# Основной сайт (порт из PORT в .env, по умолчанию 3000)
+pm2 start scripts/start-web.cjs --name web
+
+# Чат поддержки (socket.io, порт из CHAT_PORT в .env, по умолчанию 3003)
 cd mini-services/chat-service && npm install && cd ../..
-pm2 start "node mini-services/chat-service/index.js" --name chat
+pm2 start mini-services/chat-service/index.js --name chat
 
 pm2 save          # сохранить список процессов
 pm2 startup       # автозапуск после перезагрузки сервера (выполните выведенную команду)
 ```
 
 Проверка: `pm2 status` — оба процесса `online`;
-`curl -I http://localhost:3000` → HTTP 200.
+`curl -I http://localhost:ПОРТ_ВИТРИНЫ` → HTTP 200.
+
+Если меняли порты в .env: `pm2 restart web chat --update-env`.
 
 ---
 
@@ -148,7 +159,7 @@ pm2 startup       # автозапуск после перезагрузки с�
 nano /etc/nginx/sites-available/13styles
 ```
 
-Содержимое (замените домен):
+Содержимое (замените домен; **порты 3000/3003 должны совпадать с PORT и CHAT_PORT из .env на сервере** — если меняли порты, замените и здесь):
 
 ```nginx
 server {
@@ -156,9 +167,10 @@ server {
     server_name ваш_домен www.ваш_домен;
     client_max_body_size 25m;
 
-    # WebSocket (чат): запросы с XTransformPort уходят в чат-сервис на :3003.
-    # Фронтенд всегда подключается как /?XTransformPort=3003 — правило ниже
-    # направляет их в нужный сервис без изменения кода.
+    # WebSocket (чат): запросы с XTransformPort уходят в чат-сервис на :CHAT_PORT.
+    # Фронтенд всегда подключается как /?XTransformPort=<CHAT_PORT из .env> — правило ниже
+    # направляет их в нужный сервис без изменения кода (порт клиент узнаёт
+    # в рантайме через /api/config/chat-port — после смены порта пересборка не нужна).
     if ($arg_XTransformPort) {
         set $backend http://127.0.0.1:$arg_XTransformPort;
     }
@@ -188,7 +200,7 @@ server {
         # чат и любые сервисы через ?XTransformPort=N
         error_page 418 = @chat;
         if ($arg_XTransformPort) { return 418; }
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3000;   # ← PORT из .env (смените, если меняли порт витрины)
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -199,7 +211,7 @@ server {
     }
 
     location @chat {
-        proxy_pass http://127.0.0.1:3003;
+        proxy_pass http://127.0.0.1:3003;   # ← CHAT_PORT из .env (смените, если меняли порт чата)
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -293,4 +305,5 @@ npm run db:dump
 | Уведомление о платеже не приходит | URL в «Адрес сайта» должен быть публичным HTTPS-доменом (localhost/ngrok DOKU игнорирует); проверьте, что `https://домен/api/payments/doku/notify` доступен извне |
 | Чат не подключается | `pm2 status` — процесс `chat` онлайн; проверьте блок `@chat` в nginx |
 | 413 при загрузке фото в админке | Увеличьте `client_max_body_size` в nginx |
-| Порт 3000 занят | `pm2 delete web` и запустите заново; либо смените порт в pm2-команде и в nginx `proxy_pass` |
+| Порт витрины занят (PORT) | Впишите свободный порт в .env (PORT) и `pm2 restart web --update-env`; в nginx `proxy_pass` укажите тот же порт |
+| Порт чата занят / чат не отвечает (CHAT_PORT) | Впишите свободный порт в .env (CHAT_PORT) и `pm2 restart chat --update-env`; в nginx блоке `@chat` укажите тот же порт — клиент подхватит автоматически через /api/config/chat-port |

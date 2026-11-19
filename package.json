@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/orchestrate.mjs",
     "build": "next build && node scripts/generate-sitemap.mjs && node scripts/afterbuild.mjs",
-    "start": "node .next/standalone/server.js",
+    "start": "node scripts/start-web.cjs",
     "lint": "eslint .",
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
