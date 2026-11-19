@@ -81,7 +81,7 @@ NODE_ENV=production
 DATABASE_URL=file:/var/www/13styles/db/custom.db
 
 # Публичный адрес сайта (обязательно! он попадает в SEO, sitemap и callback DOKU):
-NEXT_PUBLIC_SITE_URL=https://ВАШ_ДОМЕН
+NEXT_PUBLIC_SITE_URL=http://13-style.com
 
 # Платежи DOKU (5 мерчантов, FUNSTAY — по умолчанию):
 DOKU_ENV=production

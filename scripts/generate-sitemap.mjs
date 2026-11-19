@@ -1,11 +1,14 @@
-// Генератор SEO-файлов 13 STYLES: РОВНО ДВА ФАЙЛА для индексирующего робота.
+// Генератор статических sitemap-файлов для SEO 13 STYLES.
 //
-//   public/sitemap.xml — ВСЕ маршруты в одном файле: главная, каталог, стили,
-//                        категории, подкатегории и все опубликованные товары
-//   public/robots.txt  — правила обхода + ссылка на sitemap
+// Требование проекта: sitemap.xml и robots.txt лежат в public/ и доступны
+// роботам по стандартным путям /sitemap.xml и /robots.txt без обработки Next.js.
 //
-// Вся остальная SEO-оптимизация (canonical, meta, robots-директивы, OG,
-// JSON-LD) живёт в коде страниц, а не в файлах для роботов.
+// Каталог > 127 000 опубликованных товаров, а один sitemap-файл принимает
+// максимум 50 000 URL — поэтому создаётся ИНДЕКС:
+//   public/sitemap.xml              — индекс, перечисляет файлы ниже
+//   public/sitemap/pages.xml        — главная, каталог, стили
+//   public/sitemap/categories.xml   — категории и подкатегории
+//   public/sitemap/products-N.xml   — все опубликованные товары (чанки по 45k)
 //
 // Запуск: node scripts/generate-sitemap.mjs [--url https://example.com]
 // Адрес сайта берётся из --url, затем NEXT_PUBLIC_SITE_URL/SITE_URL.
@@ -18,13 +21,15 @@ import { PrismaClient } from '@prisma/client'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
 const PUBLIC_DIR = path.join(ROOT, 'public')
+const SITEMAP_DIR = path.join(PUBLIC_DIR, 'sitemap')
+const PER_FILE = 45_000
 
 const urlFlagIndex = process.argv.indexOf('--url')
 const SITE_URL = String(
   (urlFlagIndex !== -1 && process.argv[urlFlagIndex + 1]) ||
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.SITE_URL ||
-    'https://13styles.example'
+    'http://13-style.com'
 ).replace(/\/+$/, '')
 
 const db = new PrismaClient()
@@ -48,35 +53,43 @@ const urlEntry = ({ loc, lastmod, changefreq = 'weekly', priority = '0.7' }) => 
   return `  <url>\n${parts.join('\n')}\n  </url>`
 }
 
-const main = async () => {
-  // Легаси-папка public/sitemap от старых сборок больше не нужна
-  const legacyDir = path.join(PUBLIC_DIR, 'sitemap')
-  if (fs.existsSync(legacyDir)) {
-    for (const entry of fs.readdirSync(legacyDir)) fs.rmSync(path.join(legacyDir, entry))
-    fs.rmdirSync(legacyDir)
-    console.log('  легаси-папка public/sitemap/ удалена')
-  }
+const urlsetDoc = (entries) =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.join('\n')}\n</urlset>\n`
 
-  const entries = []
+const writeSitemapFile = (name, entries) => {
+  const file = path.join(SITEMAP_DIR, name)
+  fs.writeFileSync(file, urlsetDoc(entries))
+  console.log(`  sitemap/${name}: ${entries.length} URL`)
+  return { name, count: entries.length, lastmod: new Date().toISOString() }
+}
+
+const main = async () => {
+  fs.mkdirSync(SITEMAP_DIR, { recursive: true })
+  // Старые чанки удаляем: после пересборки их список мог измениться
+  for (const entry of fs.readdirSync(SITEMAP_DIR)) fs.rmSync(path.join(SITEMAP_DIR, entry))
+
+  const indexFiles = []
 
   // --- Страницы витрины ------------------------------------------------------
-  entries.push(
+  const pages = [
     { loc: `${SITE_URL}/`, changefreq: 'daily', priority: '1.0' },
     { loc: `${SITE_URL}/catalog`, changefreq: 'daily', priority: '0.9' },
     { loc: `${SITE_URL}/styles`, changefreq: 'monthly', priority: '0.5' },
-  )
+  ]
+  indexFiles.push(writeSitemapFile('pages.xml', pages.map(urlEntry)))
 
   // --- Категории и подкатегории ----------------------------------------------
   const categories = await db.category.findMany({ include: { subcategories: true } })
+  const categoryEntries = []
   for (const category of categories) {
-    entries.push({
+    categoryEntries.push({
       loc: `${SITE_URL}/catalog/category/${category.slug}`,
       changefreq: 'daily',
       priority: '0.8',
       lastmod: category.updatedAt,
     })
     for (const sub of category.subcategories || []) {
-      entries.push({
+      categoryEntries.push({
         loc: `${SITE_URL}/catalog/category/${category.slug}/${sub.slug}`,
         changefreq: 'daily',
         priority: '0.8',
@@ -84,13 +97,26 @@ const main = async () => {
       })
     }
   }
+  indexFiles.push(writeSitemapFile('categories.xml', categoryEntries.map(urlEntry)))
 
-  // --- Все опубликованные товары: /product/{slug} -----------------------------
+  // --- Товары: каждый опубликованный товар = маршрут /product/{slug} ----------
   const total = await db.product.count({ where: { published: true, decor: false } })
-  console.log(`Товаров в sitemap: ${total} — все в одном файле`)
+  console.log(`Товаров в sitemap: ${total}`)
 
   const BATCH = 10_000
   let cursor = 0
+  let chunk = []
+  let chunkIndex = 1
+  const flushChunk = async (force = false) => {
+    if (chunk.length >= PER_FILE || (force && chunk.length > 0)) {
+      const entries = chunk.map(urlEntry)
+      indexFiles.push(writeSitemapFile(`products-${chunkIndex}.xml`, entries))
+      chunk = []
+      chunkIndex += 1
+    }
+    if (force) return
+  }
+
   while (cursor < total) {
     const rows = await db.product.findMany({
       where: { published: true, decor: false },
@@ -101,7 +127,7 @@ const main = async () => {
     })
     if (!rows.length) break
     for (const row of rows) {
-      entries.push({
+      chunk.push({
         loc: `${SITE_URL}/product/${row.slug}`,
         changefreq: 'weekly',
         priority: '0.7',
@@ -109,18 +135,25 @@ const main = async () => {
       })
     }
     cursor += rows.length
+    await flushChunk()
   }
+  await flushChunk(true)
 
-  // --- Единый sitemap.xml ------------------------------------------------------
-  const doc =
+  // --- Индекс sitemap.xml ------------------------------------------------------
+  const indexDoc =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-    entries.map(urlEntry).join('\n') +
-    `\n</urlset>\n`
-  fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), doc)
-  console.log(`sitemap.xml: ${entries.length} URL в одном файле (${SITE_URL})`)
+    `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    indexFiles
+      .map(
+        (file) =>
+          `  <sitemap>\n    <loc>${SITE_URL}/sitemap/${file.name}</loc>\n    <lastmod>${xmlDate(file.lastmod)}</lastmod>\n  </sitemap>`
+      )
+      .join('\n') +
+    `\n</sitemapindex>\n`
+  fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), indexDoc)
+  console.log(`sitemap.xml: индекс из ${indexFiles.length} файлов (${SITE_URL})`)
 
-  // --- robots.txt ---------------------------------------------------------------
+  // --- robots.txt в public/ ----------------------------------------------------
   const robots = [
     '# robots.txt 13 STYLES — генерируется scripts/generate-sitemap.mjs',
     'User-agent: *',
@@ -130,7 +163,14 @@ const main = async () => {
     'Disallow: /api/',
     'Disallow: /account',
     'Disallow: /checkout',
-    'Disallow: /payment',
+    '',
+    'User-agent: googlebot',
+    'Allow: /',
+    'Disallow: /admin',
+    'Disallow: /admin/',
+    'Disallow: /api/',
+    'Disallow: /account',
+    'Disallow: /checkout',
     '',
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     '',
