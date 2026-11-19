@@ -43,6 +43,8 @@ model Product {
   id          Int      @id @default(autoincrement())
   slug        String   @unique
   name        String
+  // Реальный бренд товара (извлекается из названия, например Burberry, Givenchy)
+  brand       String   @default("")
   shortDesc   String   @default("")
   description String   @default("")
   price       Float
@@ -99,6 +101,8 @@ model PaymentMethod {
   brand     String   @default("card")
   last4     String   @default("")
   expiry    String   @default("")
+  // Токен сохранённой карты от DOKU (для возможных off-session платежей)
+  token     String   @default("")
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
 }
@@ -122,4 +126,65 @@ model Order {
   // JSON [{productId, slug, name, price, qty, size, image}]
   items     String   @default("[]")
   createdAt DateTime @default(now())
+}
+
+// Мерчант DOKU (подключённая платёжная система). Настройки редактируются в админке.
+model PaymentMerchant {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  clientId  String   @default("")
+  secretKey String   @default("")
+  apiKey    String   @default("")
+  // Боевой или тестовый режим: production | sandbox
+  mode      String   @default("production")
+  // Ключи песочницы DOKU (если отличаются от боевых)
+  sandboxClientId  String @default("")
+  sandboxSecretKey String @default("")
+  // Мерчант по умолчанию для новых платежей
+  isDefault Boolean  @default(false)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Платёж DOKU по заказу
+model Payment {
+  id            Int      @id @default(autoincrement())
+  orderCode     String
+  merchantCode  String   @default("")
+  // Суммы: в евро по каталогу и в IDR (то, что реально уходит в DOKU)
+  amountEur     Float
+  amountIdr     Int
+  rate          Float
+  currency      String   @default("IDR")
+  // pending | success | failed | expired | canceled
+  status        String   @default("pending")
+  channel       String   @default("")
+  // Наш Request-Id при создании и original_request_id из уведомления
+  requestId     String   @default("")
+  dokuRequestId String   @default("")
+  invoiceNumber String   @default("")
+  payUrl        String   @default("")
+  sessionId     String   @default("")
+  // Токенизация карты: DOKU сохраняет карту по customer.id, токен приходит в уведомлении
+  cardToken     String   @default("")
+  cardBrand     String   @default("")
+  cardLast4     String   @default("")
+  customerRef   String   @default("")
+  userId        Int?
+  mode          String   @default("production")
+  rawRequest    String   @default("")
+  rawNotify     String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([orderCode])
+  @@index([status])
+}
+
+// Глобальные настройки витрины (в т.ч. платёжной системы)
+model Setting {
+  key       String   @id
+  value     String   @default("")
+  updatedAt DateTime @updatedAt
 }

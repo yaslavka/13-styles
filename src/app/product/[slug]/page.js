@@ -58,7 +58,7 @@ const ProductPage = async ({ params }) => {
     description: product.shortDesc || product.description,
     sku: product.slug,
     image: (product.images || []).map((src) => `${SITE_URL}${src}`),
-    brand: { '@type': 'Brand', name: '13 STYLES' },
+    brand: { '@type': 'Brand', name: product.brand || '13 STYLES' },
     category: [product.category?.name, product.subcategory?.name].filter(Boolean).join(' > '),
     aggregateRating: {
       '@type': 'AggregateRating',

@@ -309,6 +309,11 @@ const ProductView = ({ product, related = [] }) => {
             </span>
           </div>
 
+          {product.brand ? (
+            <p className="mt-2 font-display text-sm font-bold uppercase tracking-widest text-orange-300">
+              {product.brand}
+            </p>
+          ) : null}
           <h1 className="mt-3 font-display text-2xl font-extrabold leading-tight text-white sm:mt-4 sm:text-4xl lg:text-5xl">{product.name}</h1>
           <p className="mt-2 text-sm font-semibold leading-relaxed text-muted-foreground sm:mt-3 sm:text-base">{product.shortDesc}</p>
 

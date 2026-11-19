@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, PackageCheck, Loader2, MessageCircle } from 'lucide-react'
+import { ArrowLeft, PackageCheck, Loader2, MessageCircle, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useCart from '@/store/useCart'
@@ -30,8 +30,24 @@ const CheckoutView = () => {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(null)
   const [error, setError] = useState('')
+  const [dokuLoading, setDokuLoading] = useState(false)
 
   const updateField = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }))
+
+  // Оплата через DOKU Checkout: сервер конвертирует EUR->IDR, открываем страницу DOKU
+  const payWithDoku = async () => {
+    if (!done) return
+    setDokuLoading(true)
+    try {
+      const data = await API.post('/api/payments/doku/create', { orderCode: done.code })
+      toast.success(`Сумма к оплате: ${data.amountIdr.toLocaleString('ru-RU')} IDR (курс ${data.rate})`)
+      window.location.href = data.paymentUrl
+    } catch (err) {
+      toast.error('Не удалось открыть оплату DOKU', { description: err.message })
+    } finally {
+      setDokuLoading(false)
+    }
+  }
 
   const submit = async (event) => {
     event.preventDefault()
@@ -75,7 +91,11 @@ const CheckoutView = () => {
         </p>
         <p className="text-sm font-semibold leading-relaxed text-muted-foreground">{t('checkout.done.text')}</p>
         <div className="flex flex-wrap justify-center gap-4">
-          <GlassButton tone="primary" onClick={() => setChatOpen(true)}>
+          <GlassButton tone="primary" onClick={payWithDoku} disabled={dokuLoading}>
+            {dokuLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Wallet className="mr-2 h-4 w-4" aria-hidden />}
+            Оплатить через DOKU
+          </GlassButton>
+          <GlassButton tone="ghost" onClick={() => setChatOpen(true)}>
             <MessageCircle className="mr-2 h-4 w-4" aria-hidden /> {t('checkout.done.chat')}
           </GlassButton>
           <GlassButton tone="ghost" onClick={() => navigate('catalog')}>

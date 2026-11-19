@@ -38,6 +38,8 @@ const toProductDTO = (row) => ({
   id: row.id,
   slug: row.slug,
   name: row.name,
+  // Реальный бренд товара (пусто — витрина показывает бренд магазина)
+  brand: row.brand || '',
   shortDesc: row.shortDesc,
   description: row.description,
   price: row.price,

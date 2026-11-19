@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ExternalLink, Loader2, CreditCard, BadgeCheck, Copy } from 'lucide-react'
+import { ExternalLink, Loader2, CreditCard, BadgeCheck, Copy, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useShop from '@/store/useShop'
@@ -37,6 +37,7 @@ const PayItemDialog = ({ item, onClose }) => {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(null)
   const [payUrl, setPayUrl] = useState('')
+  const [dokuLoading, setDokuLoading] = useState(false)
 
   const byLink = item?.customPayment === true && item?.paymentUrl
   const itemTotal = item ? item.price * item.qty : 0
@@ -86,6 +87,21 @@ const PayItemDialog = ({ item, onClose }) => {
     toast.info(t('pay.linkOpened'))
   }
 
+  // Оплата через DOKU Checkout: конвертация EUR->IDR на сервере, страница DOKU в новой вкладке
+  const payWithDoku = async () => {
+    if (!done) return
+    setDokuLoading(true)
+    try {
+      const data = await API.post('/api/payments/doku/create', { orderCode: done.code })
+      toast.success(`Сумма к оплате: ${data.amountIdr.toLocaleString('ru-RU')} IDR (курс ${data.rate})`)
+      window.location.href = data.paymentUrl
+    } catch (err) {
+      toast.error('Не удалось открыть оплату DOKU', { description: err.message })
+    } finally {
+      setDokuLoading(false)
+    }
+  }
+
   if (!item) return null
 
   return (
@@ -114,9 +130,16 @@ const PayItemDialog = ({ item, onClose }) => {
               <GlassButton tone="primary" className="h-12 w-full text-base" onClick={openPayLink}>
                 <ExternalLink className="mr-2 h-4 w-4" aria-hidden /> {t('pay.openLink')}
               </GlassButton>
-            ) : (
+            ) : null}
+            {!byLink ? (
+              <GlassButton tone="primary" className="h-12 w-full text-base" onClick={payWithDoku} disabled={dokuLoading}>
+                {dokuLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden /> : <Wallet className="mr-2 h-4 w-4" aria-hidden />}
+                Оплатить через DOKU
+              </GlassButton>
+            ) : null}
+            {!payUrl && byLink ? (
               <p className="text-sm font-semibold text-muted-foreground">{t('pay.doneNote')}</p>
-            )}
+            ) : null}
             <GlassButton tone="ghost" className="h-11 w-full" onClick={onClose}>
               {t('pay.close')}
             </GlassButton>
