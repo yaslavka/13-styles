@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CreditCard, Save, RefreshCw, ShieldCheck, Copy, ExternalLink } from 'lucide-react'
+import { CreditCard, Save, RefreshCw, ShieldCheck, Copy, ExternalLink, Wallet, CalendarRange } from 'lucide-react'
 import { toast } from 'sonner'
 import API from '@/lib/api'
 import useShop from '@/store/useShop'
@@ -32,6 +32,25 @@ const STATUS_LABELS = {
   refunded: 'возврат',
 }
 
+// Карточки статистики: порядок и цвета. failed объединяет неудачные и истёкшие
+// (истёкшие показываются в карточке отдельной строкой).
+const STAT_CARDS = [
+  { key: 'success', title: 'Успешные платежи', accent: 'text-emerald-300', ring: 'border-emerald-400/30', bg: 'bg-emerald-500/10', extra: null },
+  { key: 'pending', title: 'Ожидаются', accent: 'text-amber-300', ring: 'border-amber-400/30', bg: 'bg-amber-500/10', extra: null },
+  { key: 'failed', title: 'Неудачные', accent: 'text-rose-300', ring: 'border-rose-400/30', bg: 'bg-rose-500/10', extra: 'expired' },
+  { key: 'canceled', title: 'Отменённые', accent: 'text-zinc-300', ring: 'border-zinc-400/30', bg: 'bg-zinc-500/10', extra: null },
+]
+
+const fmtEur = (value) => `€${Number(value || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const fmtIdr = (value) => `Rp ${Number(value || 0).toLocaleString('ru-RU')}`
+
+// Периоды-пресеты для блока статистики
+const shiftDate = (days) => {
+  const date = new Date()
+  date.setDate(date.getDate() - days)
+  return date.toISOString().slice(0, 10)
+}
+
 const AdminPayments = () => {
   const siteUrl = useShop((state) => state.siteUrl || 'http://localhost:3000')
   const [loading, setLoading] = useState(true)
@@ -39,9 +58,34 @@ const AdminPayments = () => {
   const [merchants, setMerchants] = useState([])
   const [settings, setSettings] = useState({ siteUrl: '', notifyAllowUnverified: false, eurIdrFallback: 17500, paymentDueMinutes: 60, customerTokenization: true })
   const [payments, setPayments] = useState([])
-  const [stats, setStats] = useState({})
   const [hosts, setHosts] = useState({ production: '', sandbox: '' })
   const [envInfo, setEnvInfo] = useState({})
+  // Статистика платежей за период (с — по)
+  const [payStats, setPayStats] = useState({})
+  const [range, setRange] = useState({ from: '', to: '' })
+  const [statsLoading, setStatsLoading] = useState(false)
+
+  const loadStats = async (nextRange = range) => {
+    setStatsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (nextRange.from) params.set('from', nextRange.from)
+      if (nextRange.to) params.set('to', nextRange.to)
+      const query = params.toString()
+      const data = await API.admin.get(`/api/admin/payments/stats${query ? `?${query}` : ''}`)
+      setPayStats(data.stats || {})
+    } catch (error) {
+      toast.error('Не удалось загрузить статистику платежей', { description: error.message })
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
+  const applyPreset = (days) => {
+    const nextRange = days === null ? { from: '', to: '' } : { from: shiftDate(days), to: new Date().toISOString().slice(0, 10) }
+    setRange(nextRange)
+    loadStats(nextRange)
+  }
 
   const notifyUrl = useMemo(() => `${settings.siteUrl || siteUrl || 'https://your-domain.com'}/api/payments/doku/notify`, [settings.siteUrl, siteUrl])
 
@@ -52,7 +96,6 @@ const AdminPayments = () => {
       setMerchants(data.merchants || [])
       setSettings(data.settings || settings)
       setPayments(data.payments || [])
-      setStats(data.stats || {})
       setHosts(data.hosts || {})
       setEnvInfo(data.env || {})
     } catch (error) {
@@ -63,6 +106,7 @@ const AdminPayments = () => {
   }
 
   useEffect(() => { load() }, [])
+  useEffect(() => { loadStats() }, [])
 
   const updateMerchant = (index, patch) => {
     setMerchants((prev) => prev.map((m, i) => {
@@ -161,6 +205,77 @@ const AdminPayments = () => {
           токен приходит в уведомлении и попадает в профиль пользователя. Рекуррентные списания требуют активации
           off-session платежей в DOKU Console — пока они не проводятся, способ оплаты сохраняется.
         </p>
+      </div>
+
+      {/* Статистика платежей за период */}
+      <div className="glass-panel space-y-4 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="flex items-center gap-2 font-display text-lg font-bold text-white">
+            <Wallet className="h-5 w-5 text-emerald-300" aria-hidden /> Статистика платежей
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => applyPreset(null)} className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors ${!range.from && !range.to ? 'bg-purple-500/30 text-white' : 'text-purple-300 hover:text-white'}`}>
+              Всё время
+            </button>
+            <button type="button" onClick={() => applyPreset(0)} className="rounded-xl px-3 py-1.5 text-xs font-bold text-purple-300 transition-colors hover:text-white">
+              Сегодня
+            </button>
+            <button type="button" onClick={() => applyPreset(6)} className="rounded-xl px-3 py-1.5 text-xs font-bold text-purple-300 transition-colors hover:text-white">
+              7 дней
+            </button>
+            <button type="button" onClick={() => applyPreset(29)} className="rounded-xl px-3 py-1.5 text-xs font-bold text-purple-300 transition-colors hover:text-white">
+              30 дней
+            </button>
+            <button type="button" onClick={() => loadStats()} className="glass-btn glass-btn-ghost rounded-xl px-2.5 py-1.5" aria-label="Обновить статистику">
+              <RefreshCw className={`h-4 w-4 ${statsLoading ? 'animate-spin' : ''}`} aria-hidden />
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="stats-from" className="text-xs font-bold text-purple-200">С</Label>
+            <Input
+              id="stats-from" type="date" value={range.from}
+              onChange={(e) => setRange((prev) => ({ ...prev, from: e.target.value }))}
+              className="bg-black/30 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="stats-to" className="text-xs font-bold text-purple-200">По</Label>
+            <Input
+              id="stats-to" type="date" value={range.to}
+              onChange={(e) => setRange((prev) => ({ ...prev, to: e.target.value }))}
+              className="bg-black/30 text-sm"
+            />
+          </div>
+          <GlassButton tone="ghost" onClick={() => loadStats()} disabled={statsLoading} className="h-10">
+            <CalendarRange className="mr-2 h-4 w-4" aria-hidden /> Показать
+          </GlassButton>
+          {range.from || range.to ? (
+            <p className="pb-2 text-xs text-purple-200/70">
+              Период: {range.from || 'начало'} — {range.to || 'сегодня'}
+            </p>
+          ) : null}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {STAT_CARDS.map((card) => {
+            const item = payStats[card.key] || { count: 0, sumEur: 0, sumIdr: 0 }
+            const expiredItem = card.extra ? payStats[card.extra] : null
+            return (
+              <div key={card.key} className={`rounded-2xl border ${card.ring} ${card.bg} p-4`}>
+                <p className={`text-xs font-bold uppercase tracking-wide ${card.accent}`}>{card.title}</p>
+                <p className="mt-1 font-display text-2xl font-bold text-white">{fmtEur(item.sumEur)}</p>
+                <p className="mt-1 text-xs text-purple-200/80">{item.count} плат. · {fmtIdr(item.sumIdr)}</p>
+                {expiredItem ? (
+                  <p className="mt-1 text-[11px] text-zinc-300/80">+ истёкших: {expiredItem.count} · {fmtEur(expiredItem.sumEur)}</p>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+        {payStats.refunded ? (
+          <p className="text-xs text-sky-200/80">Возвраты: {payStats.refunded.count} · {fmtEur(payStats.refunded.sumEur)}</p>
+        ) : null}
       </div>
 
       {/* Глобальные настройки */}
@@ -316,13 +431,6 @@ const AdminPayments = () => {
       <div className="glass-panel space-y-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-lg font-bold text-white">Последние платежи</h3>
-          <div className="flex flex-wrap gap-2 text-xs">
-            {Object.entries(stats).map(([status, count]) => (
-              <Badge key={status} className={`border ${STATUS_STYLES[status] || 'border-purple-400/30 bg-purple-500/20 text-purple-200'}`}>
-                {STATUS_LABELS[status] || status}: {count}
-              </Badge>
-            ))}
-          </div>
         </div>
         {payments.length === 0 ? (
           <p className="py-6 text-center text-sm text-purple-200/60">Платежей пока нет — оформите заказ и оплатите через DOKU</p>

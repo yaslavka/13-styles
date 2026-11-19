@@ -6,13 +6,6 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /account
 Disallow: /checkout
+Disallow: /payment
 
-User-agent: googlebot
-Allow: /
-Disallow: /admin
-Disallow: /admin/
-Disallow: /api/
-Disallow: /account
-Disallow: /checkout
-
-Sitemap: https://13styles.example/sitemap.xml
+Sitemap: http://localhost:3000/sitemap.xml
