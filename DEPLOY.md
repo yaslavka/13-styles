@@ -39,16 +39,24 @@ sitemap и socket.io-чат поддержки. Всё это живёт в по
 ssh root@ВАШ_IP
 ```
 
-Установите Node.js 20 LTS, git, Apache, certbot и pm2:
+Установите Node.js (20.9 или новее; проект протестирован на Node 24 LTS), git, Apache, certbot и pm2.
+
+Если на сервере уже стоит Node.js 24 — менять его НЕ нужно, достаточно свежего патча:
+
+```bash
+apt update && apt install --only-upgrade nodejs
+```
+
+Если Node.js ещё нет:
 
 ```bash
 apt update && apt upgrade -y
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt install -y nodejs git apache2 certbot python3-certbot-apache
 npm install -g pm2
 ```
 
-Проверьте версии: `node -v` (v20.x), `npm -v`, `git --version`, `pm2 -v`.
+Проверьте версии: `node -v` (v20.9+ / v24.x), `npm -v`, `git --version`, `pm2 -v`.
 
 ---
 
@@ -296,7 +304,7 @@ npm run db:dump
 
 | Симптом | Причина и решение |
 |---------|-------------------|
-| `RangeError: Maximum call stack size exceeded`, pm2 перезапускает web по кругу | Проверьте `node -v` — нужен Node 20 LTS. Убедитесь, что версия Next та же, что при сборке: `npm ls next` — должно быть `next@16.1.3` (точные версии зафиксированы в package.json, диапазон `^` убран: при `npm install` 16.4.x тянулся неоттестированный релиз с этой ошибкой). Затем `git pull && npm install && npm run build && pm2 restart web chat --update-env`. Если падение осталось — теперь в логе виден реальный стек: `start-web.cjs` печатает полные кадры вместо «ignore-listed frames» — пришлите `pm2 logs web --err --lines 80` |
+| `RangeError: Maximum call stack size exceeded`, pm2 перезапускает web по кругу | Node менять НЕ нужно (20.9+ поддерживается, тестировался на v24.22.x). Основная причина — version-микс Next.js: `npm ls next` должен показать `next@16.1.3` (точные версии зафиксированы в package.json; при `npm install` с диапазоном `^` тянулся неоттестированный 16.4.x с этой ошибкой). Выполните `git pull && npm install && npm run build && pm2 restart web chat --update-env`. Если падение осталось — теперь в логе виден реальный стек: `start-web.cjs` печатает полные кадры вместо «ignore-listed frames» — пришлите `pm2 logs web --err --lines 80` |
 | `/sitemap.xml` отдаёт 404/пустой файл | Запустите `npm run sitemap` — файлы генерируются в `public/` |
 | Фото товаров 404 | Клон был неполным — убедитесь, что `public/products/g2l` существует (`git checkout -- public/products`) |
 | Оплата DOKU: «Could not open DOKU payment» | Проверьте ключи мерчанта в админке и режим (БОЕВОЙ/ТЕСТ); смотрите журнал `pm2 logs web` |
