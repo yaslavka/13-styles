@@ -40,4 +40,25 @@ if (!fs.existsSync(serverPath)) {
 process.env.PORT = process.env.PORT || '3000'
 process.env.HOSTNAME = process.env.HOSTNAME || '0.0.0.0'
 console.log(`[start-web] витрина 13 STYLES запускается на порту ${process.env.PORT} (PORT из .env)`)
+
+// --- Диагностика падений: печатаем РЕАЛЬНЫЙ стек вместо «ignore-listed frames» ---
+// Node скрывает кадры стека, помеченные в source-map как ignoreList (внутренности
+// Next.js), и при рекурсии в фреймворке в логе остаётся только
+// «RangeError: Maximum call stack size exceeded at ignore-listed frames».
+// Собственный prepareStackTrace возвращает сырые кадры V8 с реальными
+// путями файлов — по ним виден источник падения.
+Error.stackTraceLimit = 60
+Error.prepareStackTrace = (err, frames) => [
+  `${err.name}: ${err.message}`,
+  ...frames.map((frame) => `    at ${frame}`),
+].join('\n')
+
+const logCrash = (kind, err) => {
+  console.error(`[start-web] ${kind} — процесс будет перезапущен pm2. Полный стек:`)
+  console.error(err && err.stack ? err.stack : err)
+  process.exit(1)
+}
+process.on('uncaughtException', (err) => logCrash('НЕПЕРЕХВАЧЕННОЕ ИСКЛЮЧЕНИЕ', err))
+process.on('unhandledRejection', (err) => logCrash('ОТКЛОНЁННЫЙ ПРОМИС', err))
+
 require(serverPath)

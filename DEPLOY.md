@@ -296,6 +296,7 @@ npm run db:dump
 
 | Симптом | Причина и решение |
 |---------|-------------------|
+| `RangeError: Maximum call stack size exceeded`, pm2 перезапускает web по кругу | Проверьте `node -v` — нужен Node 20 LTS. Убедитесь, что версия Next та же, что при сборке: `npm ls next` — должно быть `next@16.1.3` (точные версии зафиксированы в package.json, диапазон `^` убран: при `npm install` 16.4.x тянулся неоттестированный релиз с этой ошибкой). Затем `git pull && npm install && npm run build && pm2 restart web chat --update-env`. Если падение осталось — теперь в логе виден реальный стек: `start-web.cjs` печатает полные кадры вместо «ignore-listed frames» — пришлите `pm2 logs web --err --lines 80` |
 | `/sitemap.xml` отдаёт 404/пустой файл | Запустите `npm run sitemap` — файлы генерируются в `public/` |
 | Фото товаров 404 | Клон был неполным — убедитесь, что `public/products/g2l` существует (`git checkout -- public/products`) |
 | Оплата DOKU: «Could not open DOKU payment» | Проверьте ключи мерчанта в админке и режим (БОЕВОЙ/ТЕСТ); смотрите журнал `pm2 logs web` |
