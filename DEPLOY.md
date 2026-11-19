@@ -39,12 +39,12 @@ sitemap и socket.io-чат поддержки. Всё это живёт в по
 ssh root@ВАШ_IP
 ```
 
-Установите Node.js 20 LTS, git, nginx, certbot и pm2:
+Установите Node.js 20 LTS, git, Apache, certbot и pm2:
 
 ```bash
 apt update && apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs git nginx certbot python3-certbot-nginx
+apt install -y nodejs git apache2 certbot python3-certbot-apache
 npm install -g pm2
 ```
 
@@ -85,8 +85,11 @@ DATABASE_URL=file:/var/www/13styles/db/custom.db
 NEXT_PUBLIC_SITE_URL=https://13-style.com
 
 # ПОРТЫ ЗАПУСКА — если стандартные на сервере заняты, впишите свои:
-# PORT      — витрина Next.js (npm start / pm2 web)
-# CHAT_PORT — socket.io чат-сервиса (pm2 chat); nginx proxy_pass должен указывать на те же порты
+# PORT      — витрина Next.js (npm start / pm2 web); ProxyPass / в Apache должен
+#             указывать на этот порт
+# CHAT_PORT — socket.io чат-сервиса (pm2 chat); в Apache порт чата менять НЕ нужно —
+#             он подставляется из запроса автоматически, а клиент узнаёт его
+#             в рантайме через /api/config/chat-port
 PORT=3000
 CHAT_PORT=3003
 
@@ -153,91 +156,85 @@ pm2 startup       # автозапуск после перезагрузки с�
 
 ---
 
-## Шаг 6. Nginx (обратный прокси)
+## Шаг 6. Apache (обратный прокси)
+
+Включите модули прокси и WebSocket (mod_proxy_wstunnel нужен для чата):
 
 ```bash
-nano /etc/nginx/sites-available/13styles
+a2enmod proxy proxy_http proxy_wstunnel rewrite headers
+systemctl restart apache2
 ```
 
-Содержимое (замените домен; **порты 3000/3003 должны совпадать с PORT и CHAT_PORT из .env на сервере** — если меняли порты, замените и здесь):
+Создайте виртуальный хост:
 
-```nginx
-server {
-    listen 80;
-    server_name ваш_домен www.ваш_домен;
-    client_max_body_size 25m;
-
-    # WebSocket (чат): запросы с XTransformPort уходят в чат-сервис на :CHAT_PORT.
-    # Фронтенд всегда подключается как /?XTransformPort=<CHAT_PORT из .env> — правило ниже
-    # направляет их в нужный сервис без изменения кода (порт клиент узнаёт
-    # в рантайме через /api/config/chat-port — после смены порта пересборка не нужна).
-    if ($arg_XTransformPort) {
-        set $backend http://127.0.0.1:$arg_XTransformPort;
-    }
-
-    location / {
-        proxy_pass $backend_or_main;  # см. примечание ниже
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
-    }
-
-    # Статика sitemap/robots/фото отдаётся напрямую из public/ Next.js —
-    # отдельной настройки не требует.
-}
+```bash
+nano /etc/apache2/sites-available/13styles.conf
 ```
 
-Из-за особенности nginx с `if` проще использовать такой рабочий вариант
-`location /` (без if, с двумя location):
+Содержимое (замените домен; **порт в ProxyPass должен совпадать с PORT из .env**.
+Порт чата в Apache прописывать НЕ нужно — он берётся из запроса автоматически,
+а клиент узнаёт его в рантайме через /api/config/chat-port):
 
-```nginx
-    location / {
-        # чат и любые сервисы через ?XTransformPort=N
-        error_page 418 = @chat;
-        if ($arg_XTransformPort) { return 418; }
-        proxy_pass http://127.0.0.1:3000;   # ← PORT из .env (смените, если меняли порт витрины)
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300s;
-    }
+```apache
+<VirtualHost *:80>
+    ServerName ваш_домен
+    ServerAlias www.ваш_домен
 
-    location @chat {
-        proxy_pass http://127.0.0.1:3003;   # ← CHAT_PORT из .env (смените, если меняли порт чата)
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_read_timeout 300s;
-    }
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyTimeout 300
+
+    # Исходный протокол (http/https) доходит до Next.js в обоих vhost
+    # без правок после certbot (Apache 2.4.10+):
+    RequestHeader set X-Forwarded-Proto "expr=%{HTTPS} == 'on' ? 'https' : 'http'"
+
+    RewriteEngine On
+
+    # 1) WebSocket-транспорт чата: запросы с ?XTransformPort=N и заголовком
+    #    Upgrade: websocket уходят туннелем (ws://) в чат-сервис на порту N.
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteCond %{QUERY_STRING} (^|&)XTransformPort=([0-9]+)(&|$)
+    RewriteRule ^(.*)$ ws://127.0.0.1:%2$1 [P,L]
+
+    # 2) Остальные запросы с ?XTransformPort=N (polling-транспорт чата и любые
+    #    другие микросервисы) — обычный HTTP-прокси на тот же динамический порт:
+    RewriteCond %{HTTP:Upgrade} !websocket [NC]
+    RewriteCond %{QUERY_STRING} (^|&)XTransformPort=([0-9]+)(&|$)
+    RewriteRule ^(.*)$ http://127.0.0.1:%2$1 [P,L]
+
+    # 3) Всё остальное — витрина Next.js (PORT из .env, здесь 3000):
+    ProxyPass / http://127.0.0.1:3000/
+    ProxyPassReverse / http://127.0.0.1:3000/
+
+    ErrorLog ${APACHE_LOG_DIR}/13styles-error.log
+    CustomLog ${APACHE_LOG_DIR}/13styles-access.log combined
+</VirtualHost>
 ```
+
+Важно: внутри каждой пары RewriteCond условие с портом стоит ПОСЛЕДНИМ —
+подстановка %2 берёт скобки из последней сработавшей строки RewriteCond.
+Порядок правил тоже важен: правила с RewriteCond проверяются до ProxyPass.
 
 Активируйте и включите HTTPS:
 
 ```bash
-ln -sf /etc/nginx/sites-available/13styles /etc/nginx/sites-enabled/13styles
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
-certbot --nginx -d ваш_домен -d www.ваш_домен   # бесплатный SSL, автообновление
+a2ensite 13styles
+a2dissite 000-default
+apache2ctl configtest && systemctl reload apache2
+certbot --apache -d ваш_домен -d www.ваш_домен   # бесплатный SSL, автообновление
 ```
 
 **HTTPS протокол обязателен.** На вопрос certbot «Please choose whether or not to
 redirect HTTP traffic to HTTPS» выберите **2 (Redirect)** — весь HTTP-трафик
-автоматически переводится на https 301-редиректом. Certbot пропишет это в nginx сам.
+автоматически переводится на https 301-редиректом. Certbot создаст SSL-вариант
+хоста и пропишет редирект в Apache сам (благодаря строке RequestHeader с expr
+конфиг править после certbot не нужно).
 
 Проверка редиректа и сертификата после certbot:
 
 ```bash
 curl -sI http://ваш_домен | head -3          # должно быть: 301 Moved Permanently + Location: https://…
-curl -sI https://ваш_домен | head -1         # HTTP/2 200
+curl -sI https://ваш_домен | head -1         # HTTP/1.1 200 OK
 ```
 
 ---
@@ -303,7 +300,7 @@ npm run db:dump
 | Фото товаров 404 | Клон был неполным — убедитесь, что `public/products/g2l` существует (`git checkout -- public/products`) |
 | Оплата DOKU: «Could not open DOKU payment» | Проверьте ключи мерчанта в админке и режим (БОЕВОЙ/ТЕСТ); смотрите журнал `pm2 logs web` |
 | Уведомление о платеже не приходит | URL в «Адрес сайта» должен быть публичным HTTPS-доменом (localhost/ngrok DOKU игнорирует); проверьте, что `https://домен/api/payments/doku/notify` доступен извне |
-| Чат не подключается | `pm2 status` — процесс `chat` онлайн; проверьте блок `@chat` в nginx |
-| 413 при загрузке фото в админке | Увеличьте `client_max_body_size` в nginx |
-| Порт витрины занят (PORT) | Впишите свободный порт в .env (PORT) и `pm2 restart web --update-env`; в nginx `proxy_pass` укажите тот же порт |
-| Порт чата занят / чат не отвечает (CHAT_PORT) | Впишите свободный порт в .env (CHAT_PORT) и `pm2 restart chat --update-env`; в nginx блоке `@chat` укажите тот же порт — клиент подхватит автоматически через /api/config/chat-port |
+| Чат не подключается | `pm2 status` — процесс `chat` онлайн; проверьте RewriteRule-блоки XTransformPort в Apache (модули proxy, proxy_wstunnel, rewrite включены) |
+| 413 при загрузке фото в админке | Увеличьте `LimitRequestBody` в Apache (по умолчанию 0 — без лимита) |
+| Порт витрины занят (PORT) | Впишите свободный порт в .env (PORT) и `pm2 restart web --update-env`; в Apache `ProxyPass /` укажите тот же порт |
+| Порт чата занят / чат не отвечает (CHAT_PORT) | Впишите свободный порт в .env (CHAT_PORT) и `pm2 restart chat --update-env`; в Apache менять ничего не нужно — порт маршрутизируется из запроса автоматически, клиент подхватит его через /api/config/chat-port |
