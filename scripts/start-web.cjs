@@ -1,5 +1,9 @@
 // Production-запуск витрины 13 STYLES с портами из .env — npm start / pm2.
 //
+// Файл намеренно CommonJS (.cjs): pm2 безошибочно поднимает его нативным
+// Node-интерпретатором, поэтому require() здесь обязателен.
+/* eslint-disable @typescript-eslint/no-require-imports */
+//
 // Читает .env из корня проекта (PORT, CHAT_PORT, DOKU_* и остальные) и запускает
 // standalone-сервер Next.js (.next/standalone/server.js) в текущем процессе.
 // Переменные окружения процесса имеют приоритет над .env.
