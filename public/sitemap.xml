@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>http://13-style.com/sitemap/pages.xml</loc>
-    <lastmod>2026-11-19T11:16:35.348Z</lastmod>
+    <loc>https://13-style.com/sitemap/pages.xml</loc>
+    <lastmod>2026-11-19T11:22:49.209Z</lastmod>
   </sitemap>
   <sitemap>
-    <loc>http://13-style.com/sitemap/categories.xml</loc>
-    <lastmod>2026-11-19T11:16:35.359Z</lastmod>
+    <loc>https://13-style.com/sitemap/categories.xml</loc>
+    <lastmod>2026-11-19T11:22:49.227Z</lastmod>
   </sitemap>
   <sitemap>
-    <loc>http://13-style.com/sitemap/products-1.xml</loc>
-    <lastmod>2026-11-19T11:16:36.148Z</lastmod>
+    <loc>https://13-style.com/sitemap/products-1.xml</loc>
+    <lastmod>2026-11-19T11:22:50.041Z</lastmod>
   </sitemap>
   <sitemap>
-    <loc>http://13-style.com/sitemap/products-2.xml</loc>
-    <lastmod>2026-11-19T11:16:37.037Z</lastmod>
+    <loc>https://13-style.com/sitemap/products-2.xml</loc>
+    <lastmod>2026-11-19T11:22:51.045Z</lastmod>
   </sitemap>
   <sitemap>
-    <loc>http://13-style.com/sitemap/products-3.xml</loc>
-    <lastmod>2026-11-19T11:16:37.738Z</lastmod>
+    <loc>https://13-style.com/sitemap/products-3.xml</loc>
+    <lastmod>2026-11-19T11:22:52.137Z</lastmod>
   </sitemap>
 </sitemapindex>

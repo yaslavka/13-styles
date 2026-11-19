@@ -6,7 +6,8 @@ export const BRAND = '13 STYLES'
 
 export const SITE_NAME = '13 STYLES'
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://13styles.example'
+// Боевой домен — https://13-style.com, HTTPS протокол обязателен
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://13-style.com'
 
 export const AGE_LABEL = '16–50'
 

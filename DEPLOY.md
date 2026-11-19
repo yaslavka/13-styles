@@ -81,7 +81,8 @@ NODE_ENV=production
 DATABASE_URL=file:/var/www/13styles/db/custom.db
 
 # Публичный адрес сайта (обязательно! он попадает в SEO, sitemap и callback DOKU):
-NEXT_PUBLIC_SITE_URL=http://13-style.com
+# HTTPS протокол обязателен — DOKU принимает только https callback-URL:
+NEXT_PUBLIC_SITE_URL=https://13-style.com
 
 # Платежи DOKU (5 мерчантов, FUNSTAY — по умолчанию):
 DOKU_ENV=production
@@ -214,6 +215,17 @@ ln -sf /etc/nginx/sites-available/13styles /etc/nginx/sites-enabled/13styles
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 certbot --nginx -d ваш_домен -d www.ваш_домен   # бесплатный SSL, автообновление
+```
+
+**HTTPS протокол обязателен.** На вопрос certbot «Please choose whether or not to
+redirect HTTP traffic to HTTPS» выберите **2 (Redirect)** — весь HTTP-трафик
+автоматически переводится на https 301-редиректом. Certbot пропишет это в nginx сам.
+
+Проверка редиректа и сертификата после certbot:
+
+```bash
+curl -sI http://ваш_домен | head -3          # должно быть: 301 Moved Permanently + Location: https://…
+curl -sI https://ваш_домен | head -1         # HTTP/2 200
 ```
 
 ---

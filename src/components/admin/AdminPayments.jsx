@@ -285,7 +285,7 @@ const AdminPayments = () => {
           <div className="space-y-2">
             <Label htmlFor="siteurl" className="text-xs font-bold text-purple-200">Адрес сайта (для callback DOKU)</Label>
             <Input
-              id="siteurl" type="url" placeholder="https://13styles.ru"
+              id="siteurl" type="url" placeholder="https://13-style.com"
               value={settings.siteUrl}
               onChange={(e) => setSettings((prev) => ({ ...prev, siteUrl: e.target.value }))}
               className="bg-black/30"

@@ -12,6 +12,7 @@
 //
 // Запуск: node scripts/generate-sitemap.mjs [--url https://example.com]
 // Адрес сайта берётся из --url, затем NEXT_PUBLIC_SITE_URL/SITE_URL.
+// Боевой домен — https://13-style.com, протокол HTTPS обязателен (http повышается до https автоматически).
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -25,12 +26,16 @@ const SITEMAP_DIR = path.join(PUBLIC_DIR, 'sitemap')
 const PER_FILE = 45_000
 
 const urlFlagIndex = process.argv.indexOf('--url')
-const SITE_URL = String(
+const RAW_URL = String(
   (urlFlagIndex !== -1 && process.argv[urlFlagIndex + 1]) ||
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.SITE_URL ||
-    'http://13-style.com'
+    'https://13-style.com'
 ).replace(/\/+$/, '')
+// HTTPS протокол обязателен (SEO + callback DOKU): для любого боевого домена http
+// принудительно повышается до https. Локальная разработка (localhost) остаётся на http.
+const IS_LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(RAW_URL)
+const SITE_URL = IS_LOCAL ? RAW_URL : RAW_URL.replace(/^http:\/\//, 'https://')
 
 const db = new PrismaClient()
 
